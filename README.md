@@ -23,3 +23,6 @@ Bash environment.
 
 This project uses browser storage and includes demo admin credentials in its
 client-side source. Do not use its authentication as production security.
+
+For the code audit and proposed Supabase architecture, see the
+[Supabase backend guide](docs/SUPABASE_BACKEND_GUIDE.md).
