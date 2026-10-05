@@ -6,10 +6,10 @@ import { supabase } from '../lib/supabase';
 const fieldClass = 'w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none focus:border-amber-400';
 const buttonClass = 'w-full rounded-xl bg-amber-400 px-4 py-3 text-sm font-bold text-gray-900 hover:bg-amber-300 disabled:opacity-50';
 
-export default function BackendProfile({ onNavigate }) {
+export default function BackendProfile({ authLinkType, onAuthLinkHandled, onNavigate }) {
   const [account, setAccount] = useState(null);
   const [isGuest, setIsGuest] = useState(false);
-  const [mode, setMode] = useState('login');
+  const [mode, setMode] = useState(() => authLinkType ? 'reset' : 'login');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -25,7 +25,7 @@ export default function BackendProfile({ onNavigate }) {
         setAccount(current);
         setIsGuest(!!session?.user?.is_anonymous);
         if (current) {
-          setMode('profile');
+          setMode(authLinkType ? 'reset' : 'profile');
           setForm((previous) => ({ ...previous, name: current.name || '', email: current.email || '',
             phone: current.phone || '', address: current.location || '' }));
         }
@@ -37,7 +37,7 @@ export default function BackendProfile({ onNavigate }) {
       else setTimeout(refresh, 0);
     }) || {};
     return () => { active = false; data?.subscription.unsubscribe(); };
-  }, []);
+  }, [authLinkType]);
 
   const change = (field) => (event) => setForm({ ...form, [field]: event.target.value });
   const perform = async (action) => {
@@ -83,6 +83,7 @@ export default function BackendProfile({ onNavigate }) {
     if (form.password.length < 8 || form.password !== form.confirm) throw new Error('Passwords must match and have at least 8 characters.');
     await setNewPassword(form.password);
     setForm({ ...form, password: '', confirm: '' });
+    onAuthLinkHandled?.();
     setNotice('Password saved.'); setMode('profile');
   }); };
 

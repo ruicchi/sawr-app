@@ -16,9 +16,17 @@ import { ProductGridSkeleton } from './components/Skeletons';
 import { CartProvider } from './context/CartContext';
 import { useCart } from './context/cart';
 import { getMyOrder, loadCatalog } from './lib/api';
+import { supabase } from './lib/supabase';
+
+const initialAuthLinkType = () => {
+  const type = new URLSearchParams(window.location.hash.slice(1)).get('type');
+  return type === 'recovery' || type === 'invite' ? type : null;
+};
+const landingAuthLinkType = initialAuthLinkType();
 
 function MainApp() {
-  const [activeTab, setActiveTab] = useState('home');
+  const [authLinkType, setAuthLinkType] = useState(landingAuthLinkType);
+  const [activeTab, setActiveTab] = useState(() => landingAuthLinkType ? 'profile' : 'home');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState(''); // State para sa live product search
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -28,6 +36,16 @@ function MainApp() {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [receiptOrder, setReceiptOrder] = useState(null);
   const [backendError, setBackendError] = useState('');
+
+  useEffect(() => {
+    const { data } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setAuthLinkType('recovery');
+        setActiveTab('profile');
+      }
+    });
+    return () => data.subscription.unsubscribe();
+  }, []);
 
   const openReceipt = async (orderId) => {
     try { setReceiptOrder(await getMyOrder(orderId)); }
@@ -224,7 +242,8 @@ function MainApp() {
         {activeTab === 'messages' && <Messages />}
         {activeTab === 'orders' && <OrderHistory onViewReceipt={openReceipt} />}
         {activeTab === 'favorites' && <Favorites products={products} onOpenProductDetail={handleOpenProductDetail} />}
-        {activeTab === 'profile' && <Profile onNavigate={(tab) => setActiveTab(tab)} />}
+        {activeTab === 'profile' && <Profile authLinkType={authLinkType}
+          onAuthLinkHandled={() => setAuthLinkType(null)} onNavigate={(tab) => setActiveTab(tab)} />}
       </main>
 
       {/* Bottom Navigation */}
@@ -259,7 +278,7 @@ function MainApp() {
 
 export default function App() {
   const [showSplash, setShowSplash] = useState(() => {
-    return !localStorage.getItem('sawrap_has_seen_splash');
+    return !landingAuthLinkType && !localStorage.getItem('sawrap_has_seen_splash');
   });
 
   const handleSplashFinish = () => {

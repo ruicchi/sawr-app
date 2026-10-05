@@ -8,7 +8,14 @@ The Supabase project is `cwhplubnatrlcutnulhj` (`https://cwhplubnatrlcutnulhj.su
 
 Brevo custom SMTP is configured in Supabase Auth with a dedicated key. The SMTP key is stored only in the provider dashboards, not in this repository. Its sender is the verified `sebastianortelo984@gmail.com` address. Brevo flags this Gmail sender as a freemail domain without authenticated DKIM/DMARC; switch to a SaWrap-owned authenticated domain before public launch and test delivery. The dedicated key is set to expire on 5 October 2027, or after 90 days of inactivity under Brevo's current policy.
 
-The source builds pass and the focused changed-file ESLint checks pass. **There is no verified live storefront or admin deployment yet.** No real menu items, stock, payment account, or staff Auth user have been entered. The first intended owner email is `sebastianortelo984@gmail.com`, but it has **not** been granted the owner role.
+The source builds pass and the focused changed-file ESLint checks pass. Both Vercel production builds are ready and their pages were checked through the signed-in account:
+
+- Storefront: `https://sawrap-storefront.vercel.app` (`sebastianortelo984-3827/sawrap-storefront`).
+- Admin: `https://sawrap-admin.vercel.app` (`sebastianortelo984-3827/sawrap-admin`).
+
+Vercel Authentication currently protects both deployments. They were deployed from the local `codex/sawrap-backend` source with the Vercel CLI, **without a Git connection**. The repository belongs to the separate `ruicchi` GitHub account, which the current user cannot access; its owner must grant Vercel access to this one repository before automatic deployments can be enabled. Do not connect or deploy the old `main` branch. No real menu items, stock, payment account, or staff Auth user have been entered. The first intended owner email is `sebastianortelo984@gmail.com`, but it has **not** been granted the owner role.
+
+Supabase Auth's Site URL is `https://sawrap-storefront.vercel.app`. Its exact redirect allow list contains that origin and `https://sawrap-admin.vercel.app`. Auth email delivery and the full invite/reset flow still need a real inbox test.
 
 ## Architecture
 
@@ -65,8 +72,8 @@ Both apps need `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` in `.env.
 
 ## Remaining setup before customers use it
 
-1. **Deploy the reviewed source:** push this backend change after review, then create two Vercel projects from the two source directories. The original `combined/` build must not be selected. Later assign the public domain to the storefront project and `admin.` to the admin project. Both may share one GitHub repository and one Supabase project.
-2. **Configure Auth URLs:** set Supabase's Site URL to the deployed storefront origin, and allow the exact storefront and admin origins as redirect URLs. Signup, guest upgrades and password resets must be tested after this; the current local default URL is unsuitable for production email links.
+1. **Connect Git safely:** have the `ruicchi` repository owner install or authorize the Vercel GitHub App for only `ruicchi/sawr-app`. Connect both existing Vercel projects to that repository, retain their respective source root directories, and set their Production Branch to `codex/sawrap-backend` before allowing an automatic production build. The repository's `main` branch still contains the original browser-only source. Later assign the public domain to the storefront project and `admin.` to the admin project. Both may share one GitHub repository and one Supabase project.
+2. **Test Auth email links:** Site URL and exact redirects are configured. Test signup, guest upgrades, invitations, and password resets on the deployed storefront. Vercel Authentication must allow the intended test recipient to open the link. Keep the admin project protected until staff access is verified.
 3. **Create the owner account securely:** after the admin origin and Auth email redirects are ready, invite `sebastianortelo984@gmail.com` from Supabase Auth. The recipient chooses their own password through the invite link. After the email is confirmed, grant `owner` in `public.staff_members` to the exact confirmed `auth.users.id` associated with that address. Do not use the old demo admin credential or put a password in SQL.
 4. **Enter real business data:** in the admin portal, add the verified menu, prices, stock and images, plus store address/phone and official E-Wallet account/QR. The backend intentionally contains no demo products. The storefront is empty until these are entered.
 5. **Test payment and access flows:** on distinct customer and staff accounts, place Cash and E-Wallet orders (including a voucher and add-on), verify E-Wallet reference/proof, accept and complete, test insufficient stock and duplicate submit, and confirm customers cannot see each other's orders or messages. Confirm a cancelled paid order has a manual refund procedure.
