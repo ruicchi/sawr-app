@@ -13,7 +13,7 @@ The source builds pass and the focused changed-file ESLint checks pass. Both Ver
 - Storefront: `https://sawrap-storefront.vercel.app` (`sebastianortelo984-3827/sawrap-storefront`).
 - Admin: `https://sawrap-admin.vercel.app` (`sebastianortelo984-3827/sawrap-admin`).
 
-Vercel Authentication currently protects both deployments. They were deployed from the local `codex/sawrap-backend` source with the Vercel CLI, **without a Git connection**. The repository belongs to the separate `ruicchi` GitHub account, which the current user cannot access; its owner must grant Vercel access to this one repository before automatic deployments can be enabled. Do not connect or deploy the old `main` branch. No real menu items, stock, payment account, or staff Auth user have been entered. The first intended owner email is `sebastianortelo984@gmail.com`, but it has **not** been granted the owner role.
+Vercel Authentication currently protects both deployments. They were deployed from the local `codex/sawrap-backend` source with the Vercel CLI, **without a Git connection**. The repository belongs to the separate `ruicchi` GitHub account, which the current user cannot access; its owner must grant Vercel access to this one repository before automatic deployments can be enabled. Do not connect or deploy the old `main` branch. No real menu items, stock, or payment account have been entered. `sebastianortelo984@gmail.com` accepted the Auth invitation and has a confirmed account with a password, but it has **not** been granted the staff owner role.
 
 Supabase Auth's Site URL is `https://sawrap-storefront.vercel.app`. Its exact redirect allow list contains that origin and `https://sawrap-admin.vercel.app`. Auth email delivery and the full invite/reset flow still need a real inbox test.
 
@@ -52,7 +52,7 @@ The app refreshes data on focus and at intervals. Realtime publication is enable
 - Database migrations: `supabase/migrations/20261005090000_sawrap_core.sql`, `20261005091000_sawrap_order_functions.sql`, `20261005092000_sawrap_public_catalog_access.sql`, `20261005093000_sawrap_payment_capture.sql`.
 - Storefront Vercel root: `sawrap-project/sawrap-ecommerce`.
 - Admin Vercel root: `sawrap-project/sawrap-admin-portal`.
-- Each app has `.env.example`. The real ignored `.env.local` files on this workstation contain only the project URL and publishable key.
+- Each app has `.env.example`. The real ignored `.env.local` files on this workstation contain the project URL and publishable key; Vercel CLI also added a local OIDC token. Never commit either `.env.local` file or either `.vercel/` directory.
 
 Run each app separately in its own terminal:
 
@@ -70,11 +70,23 @@ npm run dev
 
 Both apps need `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` in `.env.local` for local work, and the same two environment variables in their respective Vercel projects for deployments. The storefront's read-only backend check is `node scripts/verify-backend.mjs` after `.env.local` exists.
 
+Until Git is connected, redeploy the existing Vercel projects manually from this linked workstation after checking out the intended branch:
+
+```powershell
+cd sawrap-project/sawrap-ecommerce
+npx --yes vercel@latest deploy --prod --yes --scope sebastianortelo984-3827
+```
+
+```powershell
+cd sawrap-project/sawrap-admin-portal
+npx --yes vercel@latest deploy --prod --yes --scope sebastianortelo984-3827
+```
+
 ## Remaining setup before customers use it
 
 1. **Connect Git safely:** have the `ruicchi` repository owner install or authorize the Vercel GitHub App for only `ruicchi/sawr-app`. Connect both existing Vercel projects to that repository, retain their respective source root directories, and set their Production Branch to `codex/sawrap-backend` before allowing an automatic production build. The repository's `main` branch still contains the original browser-only source. Later assign the public domain to the storefront project and `admin.` to the admin project. Both may share one GitHub repository and one Supabase project.
 2. **Test Auth email links:** Site URL and exact redirects are configured. Test signup, guest upgrades, invitations, and password resets on the deployed storefront. Vercel Authentication must allow the intended test recipient to open the link. Keep the admin project protected until staff access is verified.
-3. **Create the owner account securely:** after the admin origin and Auth email redirects are ready, invite `sebastianortelo984@gmail.com` from Supabase Auth. The recipient chooses their own password through the invite link. After the email is confirmed, grant `owner` in `public.staff_members` to the exact confirmed `auth.users.id` associated with that address. Do not use the old demo admin credential or put a password in SQL.
+3. **Grant the owner role after approval:** the invite and password setup are complete. Grant `owner` in `public.staff_members` to the exact confirmed `auth.users.id` (`1e8ef8cb-9c33-4ded-af50-91d78c258147`) associated with `sebastianortelo984@gmail.com`, then test admin sign-in. Do not use the old demo admin credential or put a password in SQL.
 4. **Enter real business data:** in the admin portal, add the verified menu, prices, stock and images, plus store address/phone and official E-Wallet account/QR. The backend intentionally contains no demo products. The storefront is empty until these are entered.
 5. **Test payment and access flows:** on distinct customer and staff accounts, place Cash and E-Wallet orders (including a voucher and add-on), verify E-Wallet reference/proof, accept and complete, test insufficient stock and duplicate submit, and confirm customers cannot see each other's orders or messages. Confirm a cancelled paid order has a manual refund procedure.
 6. **Authenticate the mail domain:** add and verify a SaWrap-owned sender in Brevo with required DNS records, then change Supabase's sender address. Test signup, invite and reset delivery. The current verified Gmail sender is provisional.
