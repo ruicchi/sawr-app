@@ -1,20 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import Header from './components/Header';
 import BottomNav from './components/BottomNav';
 import CartModal from './components/CartModal';
-import NotificationModal from './components/NotificationModal';
+import NotificationModal from './components/BackendNotificationModal';
 import Checkout from './pages/Checkout';
 import ProductDetail from './pages/ProductDetail';
 import OrderHistory from './pages/OrderHistory';
-import Messages from './pages/Messages';
+import Messages from './pages/BackendMessages';
 import Favorites from './pages/Favorites';
-import Profile from './pages/Profile';
+import Profile from './pages/BackendProfile';
 import SplashScreen from './components/SplashScreen';
 import ReceiptModal from './components/ReceiptModal';
 import ErrorBoundary from './components/ErrorBoundary';
 import { ProductGridSkeleton } from './components/Skeletons';
-import { CartProvider, useCart } from './context/CartContext';
-import { getProducts, getBanners, subscribeToStorage } from './utils/storage';
+import { CartProvider } from './context/CartContext';
+import { useCart } from './context/cart';
+import { getMyOrder, loadCatalog } from './lib/api';
 
 function MainApp() {
   const [activeTab, setActiveTab] = useState('home');
@@ -25,32 +26,38 @@ function MainApp() {
 
   const [currentScreen, setCurrentScreen] = useState('main');
   const [selectedProduct, setSelectedProduct] = useState(null);
-  const [receiptOrderId, setReceiptOrderId] = useState(null);
+  const [receiptOrder, setReceiptOrder] = useState(null);
+  const [backendError, setBackendError] = useState('');
 
-  const openReceipt = (orderId) => {
-    setReceiptOrderId(orderId);
+  const openReceipt = async (orderId) => {
+    try { setReceiptOrder(await getMyOrder(orderId)); }
+    catch (error) { setBackendError(error.message); }
   };
 
-  const allOrders = JSON.parse(localStorage.getItem('sawrap_orders') || '[]');
-  const receiptOrder = receiptOrderId ? allOrders.find((o) => o.id === receiptOrderId) : null;
-
-  // Mga produkto at banner na galing sa localStorage (pinupuno/ina-update ng Admin Portal)
-  const [products, setProducts] = useState(() => getProducts());
-  const [activeBanner, setActiveBanner] = useState(() => getBanners()[0] || null);
+  const [products, setProducts] = useState([]);
+  const [activeBanner, setActiveBanner] = useState(null);
   const [isHomeLoading, setIsHomeLoading] = useState(true);
 
   useEffect(() => {
-    const timer = setTimeout(() => setIsHomeLoading(false), 500);
-    return () => clearTimeout(timer);
-  }, []);
-
-  useEffect(() => {
-    // Kapag may pagbabago ang Admin Portal (kahit ibang tab), i-refresh natin
-    const unsubscribe = subscribeToStorage(() => {
-      setProducts(getProducts());
-      setActiveBanner(getBanners()[0] || null);
-    });
-    return unsubscribe;
+    let active = true;
+    const refresh = async () => {
+      try {
+        const catalog = await loadCatalog();
+        if (!active) return;
+        setProducts(catalog.products);
+        setActiveBanner(catalog.banners[0] || null);
+        setBackendError('');
+      } catch (error) {
+        if (active) setBackendError(error.message || 'Could not load the menu.');
+      } finally {
+        if (active) setIsHomeLoading(false);
+      }
+    };
+    refresh();
+    const onFocus = () => refresh();
+    window.addEventListener('focus', onFocus);
+    const timer = setInterval(refresh, 30000);
+    return () => { active = false; window.removeEventListener('focus', onFocus); clearInterval(timer); };
   }, []);
 
   const { totalItemCount, addToCart } = useCart();
@@ -107,6 +114,7 @@ function MainApp() {
 
       {/* Main Content Area */}
       <main className="mx-auto max-w-7xl px-4 py-4 md:px-8">
+        {backendError && <div role="alert" className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{backendError}</div>}
         {activeTab === 'home' && (
           isHomeLoading ? (
             <ProductGridSkeleton />
@@ -160,8 +168,8 @@ function MainApp() {
             {/* Product List Grid */}
             {filteredProducts.length === 0 ? (
               <div className="bg-white rounded-3xl p-12 text-center border border-gray-100 shadow-2xs space-y-2 mt-4">
-                <p className="text-sm font-bold text-gray-600">No flavors found matching "{searchQuery}"</p>
-                <p className="text-xs text-gray-400">Try searching for Classic, Chocowrap, or check other categories.</p>
+                <p className="text-sm font-bold text-gray-600">{searchQuery ? `No flavors found matching "${searchQuery}"` : 'The menu is being prepared'}</p>
+                <p className="text-xs text-gray-400">{searchQuery ? 'Try another flavor or category.' : 'Please check back soon.'}</p>
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
@@ -215,7 +223,7 @@ function MainApp() {
         {/* Tab Navigation Views */}
         {activeTab === 'messages' && <Messages />}
         {activeTab === 'orders' && <OrderHistory onViewReceipt={openReceipt} />}
-        {activeTab === 'favorites' && <Favorites onOpenProductDetail={handleOpenProductDetail} />}
+        {activeTab === 'favorites' && <Favorites products={products} onOpenProductDetail={handleOpenProductDetail} />}
         {activeTab === 'profile' && <Profile onNavigate={(tab) => setActiveTab(tab)} />}
       </main>
 
@@ -243,7 +251,7 @@ function MainApp() {
       />
 
       {receiptOrder && (
-        <ReceiptModal order={receiptOrder} onClose={() => setReceiptOrderId(null)} />
+        <ReceiptModal order={receiptOrder} onClose={() => setReceiptOrder(null)} />
       )}
     </div>
   );

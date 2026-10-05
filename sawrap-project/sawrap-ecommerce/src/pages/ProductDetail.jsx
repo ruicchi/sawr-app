@@ -1,9 +1,8 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { ArrowLeft, Heart, Minus, Plus, ShoppingCart, Check } from 'lucide-react';
-import { useCart } from '../context/CartContext';
+import { useCart } from '../context/cart';
 import CartModal from '../components/CartModal';
-import NotificationModal from '../components/NotificationModal';
-import { getAddons } from '../utils/storage';
+import NotificationModal from '../components/BackendNotificationModal';
 
 export default function ProductDetail({ product, onBack, onGoToCheckout }) {
   const { addToCart, favorites, toggleFavorite, totalItemCount } = useCart();
@@ -18,8 +17,7 @@ export default function ProductDetail({ product, onBack, onGoToCheckout }) {
 
   const isFavorite = favorites?.includes(product.id);
 
-  // Galing na sa Admin Portal (localStorage: sawrap_addons) ang listahan ng add-ons
-  const addonsList = getAddons().map((a) => ({ id: a.id, name: a.name, price: a.price }));
+  const addonsList = product.addons || [];
 
   const toggleAddon = (addonName) => {
     if (selectedAddons.includes(addonName)) {

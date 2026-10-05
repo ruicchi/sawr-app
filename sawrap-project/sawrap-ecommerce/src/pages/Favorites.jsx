@@ -1,18 +1,8 @@
-import React, { useState, useEffect } from 'react';
 import { Heart } from 'lucide-react';
-import { useCart } from '../context/CartContext';
-import { getProducts } from '../utils/storage';
-import { FavoritesSkeleton } from '../components/Skeletons';
+import { useCart } from '../context/cart';
 
-export default function Favorites({ onOpenProductDetail }) {
+export default function Favorites({ products, onOpenProductDetail }) {
   const { favorites, toggleFavorite, addToCart } = useCart();
-  const [products, setProducts] = useState(() => getProducts());
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 400);
-    return () => clearTimeout(timer);
-  }, []);
 
   const favoriteProducts = products.filter((item) => favorites.includes(item.id));
 
@@ -27,9 +17,7 @@ export default function Favorites({ onOpenProductDetail }) {
       </div>
 
       {/* Empty State */}
-      {isLoading ? (
-        <FavoritesSkeleton />
-      ) : favoriteProducts.length === 0 ? (
+      {favoriteProducts.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 bg-white rounded-3xl border border-gray-100 p-8 text-center space-y-3">
           <div className="flex h-16 w-16 items-center justify-center rounded-full bg-amber-50 text-amber-400">
             <Heart className="h-8 w-8 fill-amber-400" />

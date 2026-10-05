@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Package, Truck, ExternalLink, CheckCircle, PackageCheck, ReceiptText } from 'lucide-react';
+import { Package, Truck, CheckCircle, PackageCheck, ReceiptText } from 'lucide-react';
 import { OrderListSkeleton } from '../components/Skeletons';
 import Toast from '../components/Toast';
+import { listMyOrders, saveCourierReference, submitPaymentReference, uploadPaymentProof } from '../lib/api';
 
 // Simpleng 3-stage progress bar: Order Placed -> Preparing -> Ready for Pick-up
 function OrderProgressBar({ status }) {
@@ -42,6 +43,8 @@ function OrderProgressBar({ status }) {
 export default function OrderHistory({ onViewReceipt }) {
   const [orders, setOrders] = useState([]);
   const [courierRefs, setCourierRefs] = useState({});
+  const [paymentRefs, setPaymentRefs] = useState({});
+  const [proofFiles, setProofFiles] = useState({});
   const [isLoading, setIsLoading] = useState(true);
   const [toastMessage, setToastMessage] = useState('');
   const [toastVariant, setToastVariant] = useState('success');
@@ -55,42 +58,65 @@ export default function OrderHistory({ onViewReceipt }) {
   };
 
   useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 450);
-    return () => clearTimeout(timer);
-  }, []);
-
-  useEffect(() => {
-    const loadOrders = () => {
-      const savedOrders = JSON.parse(localStorage.getItem('sawrap_orders') || '[]');
-      setOrders(savedOrders);
+    let active = true;
+    const loadOrders = async () => {
+      try {
+        const rows = await listMyOrders();
+        if (active) setOrders(rows);
+      } catch (error) {
+        if (active) showToast(error.message || 'Could not load orders.', 'error');
+      } finally {
+        if (active) setIsLoading(false);
+      }
     };
     loadOrders();
-
-    window.addEventListener('storage', loadOrders);
-    const interval = setInterval(loadOrders, 2000);
+    window.addEventListener('focus', loadOrders);
+    const interval = setInterval(loadOrders, 10000);
     return () => {
-      window.removeEventListener('storage', loadOrders);
+      active = false;
+      window.removeEventListener('focus', loadOrders);
       clearInterval(interval);
     };
   }, []);
 
-  const handleSaveCourierRef = (orderId) => {
+  const handleSaveCourierRef = async (orderId) => {
     const ref = courierRefs[orderId];
     if (!ref || !ref.trim()) {
       showToast('Please enter a valid booking reference or tracking number.', 'error');
       return;
     }
 
-    const updatedOrders = orders.map(ord => {
-      if (ord.id === orderId) {
-        return { ...ord, courierReference: ref };
-      }
-      return ord;
-    });
+    try {
+      const order = orders.find((entry) => entry.id === orderId);
+      await saveCourierReference(order.databaseId, ref);
+      setOrders(await listMyOrders());
+      showToast('Courier tracking reference saved successfully!', 'success');
+    } catch (error) {
+      showToast(error.message || 'Could not save reference.', 'error');
+    }
+  };
 
-    setOrders(updatedOrders);
-    localStorage.setItem('sawrap_orders', JSON.stringify(updatedOrders));
-    showToast('Courier tracking reference saved successfully!', 'success');
+  const handleSubmitPayment = async (order) => {
+    const reference = paymentRefs[order.id]?.trim();
+    if (!reference) { showToast('Enter your E-Wallet reference.', 'error'); return; }
+    try {
+      await submitPaymentReference(order.databaseId, reference);
+      if (proofFiles[order.id]) await uploadPaymentProof(order.databaseId, proofFiles[order.id]);
+      setOrders(await listMyOrders());
+      showToast('Payment details sent. The store will verify them.');
+    } catch (error) {
+      setOrders(await listMyOrders());
+      showToast(error.message || 'Could not submit payment details.', 'error');
+    }
+  };
+
+  const handleUploadProof = async (order) => {
+    if (!proofFiles[order.id]) { showToast('Choose a receipt image first.', 'error'); return; }
+    try {
+      await uploadPaymentProof(order.databaseId, proofFiles[order.id]);
+      setOrders(await listMyOrders());
+      showToast('Payment receipt uploaded.');
+    } catch (error) { showToast(error.message || 'Could not upload receipt.', 'error'); }
   };
 
   return (
@@ -147,7 +173,7 @@ export default function OrderHistory({ onViewReceipt }) {
                       {item.qty || 1}x {item.name}
                       {item.addons?.length > 0 ? ` (+ ${item.addons.join(', ')})` : ''}
                     </span>
-                    <span className="font-bold">₱ {(item.price * (item.qty || 1)).toFixed(2)}</span>
+                    <span className="font-bold">₱ {((item.price + (item.addonPrices || []).reduce((sum, price) => sum + price, 0)) * (item.qty || 1)).toFixed(2)}</span>
                   </div>
                 ))}
               </div>
@@ -156,6 +182,23 @@ export default function OrderHistory({ onViewReceipt }) {
                 <span>Total Amount ({order.paymentMethod})</span>
                 <span className="text-amber-500 text-sm font-black">₱ {order.total.toFixed(2)}</span>
               </div>
+
+              {order.paymentMethod === 'E-Wallet' && !isCancelled && (
+                <div className="rounded-2xl border border-amber-200 bg-amber-50/70 p-4 text-xs space-y-2">
+                  {order.eWalletRef ? (
+                    <p className="font-bold text-amber-900">Payment reference {order.eWalletRef} · {order.paymentState === 'verified' ? 'Verified' : order.paymentState === 'rejected' ? 'Rejected — contact the store' : 'Waiting for staff verification'}</p>
+                  ) : (
+                    <><p className="font-bold text-amber-900">Payment reference needed for order {order.id}. Amount due: ₱ {order.total.toFixed(2)}</p>
+                      <input className="w-full rounded-xl border border-amber-200 bg-white p-2" placeholder="E-Wallet reference number" value={paymentRefs[order.id] || ''}
+                        onChange={(e) => setPaymentRefs({ ...paymentRefs, [order.id]: e.target.value })} />
+                      <button className="rounded-xl bg-amber-400 px-4 py-2 font-bold text-white" onClick={() => handleSubmitPayment(order)}>Submit reference</button></>
+                  )}
+                  {order.paymentState === 'unverified' && !order.proofPath && <div className="space-y-2">
+                    <input type="file" accept="image/jpeg,image/png,image/webp" className="w-full" onChange={(e) => setProofFiles({ ...proofFiles, [order.id]: e.target.files[0] || null })} />
+                    {order.eWalletRef && <button className="rounded-xl border border-amber-300 bg-white px-4 py-2 font-bold text-amber-800" onClick={() => handleUploadProof(order)}>Upload receipt</button>}
+                  </div>}
+                </div>
+              )}
 
               {/* View Receipt - lumalabas lang kapag Completed na ang order */}
               {order.status === 'Completed' && (

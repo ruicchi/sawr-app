@@ -1,10 +1,7 @@
-import React from 'react';
 import { CheckCircle2, ShoppingBag, Clock, ArrowRight } from 'lucide-react';
 
-export default function OrderSuccessModal({ isOpen, onClose, onViewOrders }) {
+export default function OrderSuccessModal({ isOpen, onClose, onViewOrders, orderCode, total }) {
   if (!isOpen) return null;
-
-  const orderId = `SW-${Math.floor(100000 + Math.random() * 900000)}`;
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-xs p-0 md:items-center md:p-4 font-sans">
@@ -21,7 +18,7 @@ export default function OrderSuccessModal({ isOpen, onClose, onViewOrders }) {
         <div className="space-y-1">
           <h2 className="text-2xl font-black text-gray-800 tracking-tight">Order Placed!</h2>
           <p className="text-xs text-gray-500 font-medium">
-            Salamat sa pag-order sa SaWrap! Inihahanda na ang crispy banana wraps mo.
+            Salamat sa pag-order sa SaWrap! Hinihintay pa ang kumpirmasyon ng store.
           </p>
         </div>
 
@@ -29,14 +26,14 @@ export default function OrderSuccessModal({ isOpen, onClose, onViewOrders }) {
         <div className="rounded-2xl bg-gray-50 p-4 border border-gray-100 text-left space-y-2 text-xs">
           <div className="flex justify-between items-center border-b border-gray-200/60 pb-2">
             <span className="text-gray-400 font-medium">Order Reference:</span>
-            <span className="font-extrabold text-gray-800">{orderId}</span>
+            <span className="font-extrabold text-gray-800">{orderCode}</span>
           </div>
 
           <div className="flex justify-between items-center pt-1">
             <span className="text-gray-400 font-medium flex items-center gap-1.5">
-              <Clock className="h-3.5 w-3.5 text-amber-500" /> Estimated Time:
+              <Clock className="h-3.5 w-3.5 text-amber-500" /> Confirmed Total:
             </span>
-            <span className="font-bold text-amber-600">15 - 20 mins</span>
+            <span className="font-bold text-amber-600">₱ {total?.toFixed(2)}</span>
           </div>
 
           <div className="flex justify-between items-center">
@@ -44,7 +41,7 @@ export default function OrderSuccessModal({ isOpen, onClose, onViewOrders }) {
               <ShoppingBag className="h-3.5 w-3.5 text-amber-500" /> Status:
             </span>
             <span className="font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-full border border-green-200">
-              Preparing
+              Pending
             </span>
           </div>
         </div>
@@ -66,7 +63,7 @@ export default function OrderSuccessModal({ isOpen, onClose, onViewOrders }) {
             onClick={onClose}
             className="w-full rounded-2xl bg-gray-100 py-2.5 text-xs font-bold text-gray-600 hover:bg-gray-200 transition-all"
           >
-            Back to Home
+            Close
           </button>
         </div>
 

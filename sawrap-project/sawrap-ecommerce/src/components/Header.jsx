@@ -1,29 +1,26 @@
-import React, { useState, useEffect } from 'react';
-import { Search, Bell, ShoppingCart, ShieldAlert } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Search, Bell, ShoppingCart } from 'lucide-react';
 import sawrapLogo from '../assets/sawrap-logo.png';
 import FallingBananas from './FallingBananas';
-import { getCurrentIdentity, getUnreadNotificationCount } from '../utils/storage';
+import { listMyNotifications } from '../lib/api';
 
 export default function Header({ onOpenCart, onOpenNotification, onOpenAdminAuth, cartCount = 0, searchQuery = '', setSearchQuery }) {
   const [logoClickCount, setLogoClickCount] = useState(0);
   const [showBananaRain, setShowBananaRain] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
 
-  // I-refresh ang bilang ng unread notifications - kasabay nito na-uupdate ang bell
-  // tuwing may pagbabago sa order status (galing Admin Portal, via sawrap_notifications)
   useEffect(() => {
-    const loadUnread = () => {
-      const identity = getCurrentIdentity();
-      setUnreadCount(identity ? getUnreadNotificationCount(identity.phone) : 0);
+    let active = true;
+    const loadUnread = async () => {
+      try {
+        const rows = await listMyNotifications();
+        if (active) setUnreadCount(rows.filter((item) => !item.read).length);
+      } catch { if (active) setUnreadCount(0); }
     };
     loadUnread();
-    const handler = (e) => {
-      if (e.key === 'sawrap_notifications' || e.key === 'sawrap_user') loadUnread();
-    };
-    window.addEventListener('storage', handler);
-    const interval = setInterval(loadUnread, 2000);
+    const interval = setInterval(loadUnread, 5000);
     return () => {
-      window.removeEventListener('storage', handler);
+      active = false;
       clearInterval(interval);
     };
   }, []);

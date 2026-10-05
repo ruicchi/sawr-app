@@ -1,6 +1,6 @@
 # SaWrap code audit and Supabase backend guide
 
-**Status:** design and audit, 5 October 2026. No Supabase project, database migration, or production authentication has been created by this guide.
+**Status:** this is the audit of the original ZIP as received on 5 October 2026. Its references to browser storage and demo authentication describe the supplied baseline, which has since been replaced in the two source apps. See [the implementation and release guide](BACKEND_IMPLEMENTATION.md) for current behavior and live project status. The `combined` directory still contains the original static build.
 
 ## 1. What the supplied code does today
 

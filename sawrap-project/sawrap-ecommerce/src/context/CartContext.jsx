@@ -1,13 +1,27 @@
-import React, { createContext, useContext, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Toast from '../components/Toast';
-
-const CartContext = createContext();
+import { supabase } from '../lib/supabase';
+import { CartContext } from './cart';
 
 export function CartProvider({ children }) {
   const [cartItems, setCartItems] = useState([]);
-  const [favorites, setFavorites] = useState([2, 7]);
+  const [favorites, setFavorites] = useState([]);
   const [voucherCode, setVoucherCode] = useState('');
   const [discountAmount, setDiscountAmount] = useState(0);
+
+  useEffect(() => {
+    let active = true;
+    const load = async () => {
+      if (!supabase) return;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) { if (active) setFavorites([]); return; }
+      const { data, error } = await supabase.from('favorites').select('product_id');
+      if (!error && active) setFavorites(data.map((row) => row.product_id));
+    };
+    load();
+    const { data } = supabase?.auth.onAuthStateChange(() => setTimeout(load, 0)) || {};
+    return () => { active = false; data?.subscription.unsubscribe(); };
+  }, []);
 
   // Toast State
   const [toastMessage, setToastMessage] = useState('');
@@ -21,18 +35,35 @@ export function CartProvider({ children }) {
     }, 2500);
   };
 
-  const toggleFavorite = (productId) => {
+  const toggleFavorite = async (productId) => {
+    const removing = favorites.includes(productId);
     setFavorites((prev) =>
       prev.includes(productId)
         ? prev.filter((id) => id !== productId)
         : [...prev, productId]
     );
+    if (!supabase) return;
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+    const result = removing
+      ? await supabase.from('favorites').delete().eq('customer_id', session.user.id).eq('product_id', productId)
+      : await supabase.from('favorites').insert({ customer_id: session.user.id, product_id: productId });
+    if (result.error) {
+      setFavorites((prev) => removing ? [...prev, productId] : prev.filter((id) => id !== productId));
+      showToast('Could not save favorite. Please try again.');
+    }
   };
 
   // SMART ADD TO CART (Consolidates items by Product ID and Add-ons)
   const addToCart = (product, quantityToAdd = 1, selectedAddons = []) => {
     const sortedAddons = [...selectedAddons].sort();
-    const addonsTotal = sortedAddons.length * 15;
+    const addonRows = sortedAddons.map((name) => product.addons?.find((addon) => addon.name === name));
+    if (addonRows.some((addon) => !addon)) {
+      showToast('An add-on is unavailable. Please refresh the menu.');
+      return;
+    }
+    const addonsTotal = addonRows.reduce((sum, addon) => sum + addon.price, 0);
+    const addonIds = addonRows.map((addon) => addon.id);
     const unitPrice = product.price + addonsTotal;
 
     setCartItems((prevItems) => {
@@ -67,6 +98,7 @@ export function CartProvider({ children }) {
           price: product.price,
           quantity: quantityToAdd,
           selectedAddons: sortedAddons,
+          addonIds,
           image: product.image,
           itemTotal: unitPrice * quantityToAdd,
         };
@@ -134,5 +166,3 @@ export function CartProvider({ children }) {
     </CartContext.Provider>
   );
 }
-
-export const useCart = () => useContext(CartContext);

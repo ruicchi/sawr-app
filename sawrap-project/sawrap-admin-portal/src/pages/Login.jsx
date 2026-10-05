@@ -1,35 +1,27 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Store, KeyRound, ArrowRight, Eye, EyeOff, AlertCircle, ShieldCheck } from 'lucide-react';
 import sawrapLogo from '../assets/sawrap-logo.png';
+import { signInStaff } from '../lib/api';
 
 export default function Login({ onLoginSuccess }) {
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
-    // Maikling delay para may bahagyang feedback bago mag-login (UX polish)
-    setTimeout(() => {
-      // Kunin ang kasalukuyang credentials (baka na-palitan na ng Owner sa Settings)
-      let validCreds = { username: 'admin', password: 'sawrap2026' };
-      const saved = localStorage.getItem('sawrap_admin_credentials');
-      if (saved) {
-        try { validCreds = JSON.parse(saved); } catch (e) { /* gamitin na lang ang default */ }
-      }
-
-      if (username === validCreds.username && password === validCreds.password) {
-        setError('');
-        sessionStorage.setItem('sawrap_owner_token', 'AUTH_TOKEN_SECURE_SW');
-        onLoginSuccess();
-      } else {
-        setError('Invalid Owner Credentials. Please try again.');
-        setIsSubmitting(false);
-      }
-    }, 350);
+    try {
+      await signInStaff(email.trim(), password);
+      setError('');
+      onLoginSuccess();
+    } catch (cause) {
+      setError(cause.message || 'Sign in failed.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -57,14 +49,14 @@ export default function Login({ onLoginSuccess }) {
 
         <form onSubmit={handleLogin} className="space-y-4">
           <div className="space-y-1">
-            <label className="text-[11px] font-extrabold uppercase text-gray-400 px-1">Owner Username</label>
+            <label className="text-[11px] font-extrabold uppercase text-gray-400 px-1">Staff Email</label>
             <div className="flex items-center rounded-2xl bg-gray-50 px-4 py-3 border border-gray-200 focus-within:border-amber-400 focus-within:bg-white transition-all">
               <Store className="h-4 w-4 text-gray-400 mr-3 flex-shrink-0" />
               <input
-                type="text"
-                placeholder="Enter your username"
-                value={username}
-                onChange={(e) => { setUsername(e.target.value); setError(''); }}
+                type="email"
+                placeholder="Enter your email"
+                value={email}
+                onChange={(e) => { setEmail(e.target.value); setError(''); }}
                 autoComplete="username"
                 className="w-full bg-transparent text-xs text-gray-800 font-bold outline-none placeholder:font-normal placeholder:text-gray-400"
               />
@@ -72,7 +64,7 @@ export default function Login({ onLoginSuccess }) {
           </div>
 
           <div className="space-y-1">
-            <label className="text-[11px] font-extrabold uppercase text-gray-400 px-1">Master Password</label>
+            <label className="text-[11px] font-extrabold uppercase text-gray-400 px-1">Password</label>
             <div className="flex items-center rounded-2xl bg-gray-50 px-4 py-3 border border-gray-200 focus-within:border-amber-400 focus-within:bg-white transition-all">
               <KeyRound className="h-4 w-4 text-gray-400 mr-3 flex-shrink-0" />
               <input
@@ -96,7 +88,7 @@ export default function Login({ onLoginSuccess }) {
 
           <button
             type="submit"
-            disabled={isSubmitting || !username || !password}
+            disabled={isSubmitting || !email || !password}
             className="w-full rounded-2xl bg-amber-400 py-3.5 text-xs font-extrabold text-white shadow-md hover:bg-amber-500 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
           >
             {isSubmitting ? (

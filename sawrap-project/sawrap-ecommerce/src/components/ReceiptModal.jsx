@@ -1,4 +1,3 @@
-import React from 'react';
 import { X, ReceiptText, Store } from 'lucide-react';
 
 export default function ReceiptModal({ order, onClose }) {
@@ -7,7 +6,7 @@ export default function ReceiptModal({ order, onClose }) {
   const formatDate = (iso) => {
     try {
       return new Date(iso).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
-    } catch (e) {
+    } catch {
       return iso;
     }
   };
@@ -64,11 +63,15 @@ export default function ReceiptModal({ order, onClose }) {
                     <p className="text-[10px] text-gray-400">+ {item.addons.join(', ')}</p>
                   )}
                 </div>
-                <span className="font-bold text-gray-800">₱ {(item.price * item.qty).toFixed(2)}</span>
+                <span className="font-bold text-gray-800">₱ {((item.price + (item.addonPrices || []).reduce((sum, price) => sum + price, 0)) * item.qty).toFixed(2)}</span>
               </div>
             ))}
           </div>
 
+          {order.discount > 0 && <div className="border-t border-dashed border-gray-200 pt-2 text-xs">
+            <div className="flex justify-between"><span>Subtotal</span><span>₱ {order.subtotal.toFixed(2)}</span></div>
+            <div className="flex justify-between text-green-700"><span>Voucher discount</span><span>− ₱ {order.discount.toFixed(2)}</span></div>
+          </div>}
           <div className="border-t-2 border-dashed border-gray-300 pt-3 flex justify-between items-center">
             <span className="text-sm font-black text-gray-800">Total</span>
             <span className="text-lg font-black text-amber-500">₱ {order.total?.toFixed(2)}</span>

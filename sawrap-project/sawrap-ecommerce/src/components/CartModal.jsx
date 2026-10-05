@@ -1,6 +1,5 @@
-import React from 'react';
-import { X, Trash2, Ticket, RotateCcw } from 'lucide-react';
-import { useCart } from '../context/CartContext';
+import { X, Trash2, Ticket } from 'lucide-react';
+import { useCart } from '../context/cart';
 
 export default function CartModal({ isOpen, onClose, onProceedToCheckout }) {
   const {

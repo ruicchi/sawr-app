@@ -1,14 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, MapPin, CreditCard, User, Phone, Ticket, MessageSquare, X } from 'lucide-react';
-import { useCart } from '../context/CartContext';
+import { useCart } from '../context/cart';
 import OrderSuccessModal from '../components/OrderSuccessModal';
 import Toast from '../components/Toast';
-import { safeSetItem } from '../utils/storage';
+import { getCurrentAccount, loadCatalog, submitOrder, submitPaymentReference, uploadPaymentProof } from '../lib/api';
 
 export default function Checkout({ onBack, onOrderSuccess }) {
   const { cartItems, grandTotal, voucherCode, setVoucherCode, clearCart } = useCart();
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
   const [isEWalletModalOpen, setIsEWalletModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [confirmedOrder, setConfirmedOrder] = useState(null);
+  const requestId = useRef(crypto.randomUUID());
   const [toastMessage, setToastMessage] = useState('');
   const [isToastVisible, setIsToastVisible] = useState(false);
 
@@ -25,6 +28,11 @@ export default function Checkout({ onBack, onOrderSuccess }) {
   const [eWalletRef, setEWalletRef] = useState('');
   const [eWalletProof, setEWalletProof] = useState(null);
   const [adminQrCode, setAdminQrCode] = useState('');
+  const [ewalletAccount, setEwalletAccount] = useState({ name: '', number: '' });
+  const [storeContact, setStoreContact] = useState({
+    address: 'Pamantasan ng Lungsod ng Maynila, General Luna Street, Intramuros, Manila, Metro Manila.',
+    phone: '09399030522',
+  });
 
   // Customer State
   const [user, setUser] = useState(null);
@@ -36,14 +44,13 @@ export default function Checkout({ onBack, onOrderSuccess }) {
   const [errors, setErrors] = useState({});
 
   useEffect(() => {
-    const savedUser = localStorage.getItem('sawrap_user');
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
-    }
-    const savedQr = localStorage.getItem('sawrap_admin_qr');
-    if (savedQr) {
-      setAdminQrCode(savedQr);
-    }
+    getCurrentAccount().then(setUser).catch((error) => showErrorToast(error.message));
+    loadCatalog().then(({ store }) => {
+      setAdminQrCode(store?.qr || '');
+      setEwalletAccount({ name: store?.ewalletAccountName || '', number: store?.ewalletAccountNumber || '' });
+      setStoreContact((current) => ({ address: store?.address || current.address,
+        phone: store?.phone || current.phone }));
+    }).catch((error) => showErrorToast(error.message));
   }, []);
 
   const handleFulfillmentChange = (method) => {
@@ -83,70 +90,57 @@ export default function Checkout({ onBack, onOrderSuccess }) {
   const handlePlaceOrderClick = () => {
     if (!validateCheckout()) return;
     if (paymentMethod === 'E-Wallet') {
-      setIsEWalletModalOpen(true);
-    } else {
-      saveOrderToLocalStorage();
+      if (!ewalletAccount.number) {
+        showErrorToast('E-Wallet payment is not configured yet. Please choose Cash or contact the store.');
+        return;
+      }
     }
+    saveOrder();
   };
 
-  const saveOrderToLocalStorage = () => {
+  const saveOrder = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     const activeName = user ? user.name : guestName;
     const activePhone = user ? user.phone : guestPhone;
     const activeAddress = fulfillmentMethod === 'courier' ? (user ? (user.location || user.address) : guestAddress) : 'Store Pick-up';
-
-    // Eksaktong tugma sa schema na binabasa ng Admin Portal (sawrap_orders)
-    const newOrder = {
-      id: 'SW-' + Math.floor(100000 + Math.random() * 900000),
-      customer: activeName,
-      phone: activePhone,
-      location: activeAddress,
-      type: fulfillmentMethod === 'courier' ? 'Courier' : 'Pick-Up',
-      paymentMethod: paymentMethod,
-      eWalletRef: eWalletRef || 'N/A',
-      items: cartItems.map((item) => ({
-        name: item.name,
-        category: item.category || '',
-        qty: item.quantity,
-        price: item.price,
-        addons: item.selectedAddons || [],
-      })),
-      total: grandTotal,
-      status: 'Pending', // Magsisimula sa Pending hanggang i-accept ng store (Admin: Pending -> Preparing -> Ready -> Completed)
-      time: new Date().toLocaleString(),
-      date: new Date().toISOString(),
-      cancelReason: '',
-    };
-
-    // I-save sa localStorage para mabasa ng admin portal at order history
-    const existingOrders = JSON.parse(localStorage.getItem('sawrap_orders') || '[]');
-    safeSetItem('sawrap_orders', JSON.stringify([newOrder, ...existingOrders]));
-
-    // Kung guest checkout ito at wala pang naka-save na identity, i-save ang
-    // pangalan/phone para malaman ng Store kung sino sila kapag nag-message
-    // (requirement: dapat may kilalang pangalan bago makapag-message)
-    if (!user && !localStorage.getItem('sawrap_user')) {
-      safeSetItem('sawrap_user', JSON.stringify({
-        name: guestName,
-        email: '',
-        phone: guestPhone,
-        location: guestAddress,
-        avatar: '',
-        createdAt: new Date().toISOString(),
+    try {
+      const placed = await submitOrder({ cartItems, customerName: activeName,
+        phone: activePhone, address: activeAddress, fulfillment: fulfillmentMethod,
+        paymentMethod, paymentReference: eWalletRef, note: orderMessage,
+        voucherCode, requestId: requestId.current });
+      if (!user) localStorage.setItem('sawrap_guest_contact', JSON.stringify({
+        name: guestName, phone: guestPhone, location: guestAddress,
       }));
+      setConfirmedOrder(placed);
+      clearCart();
+      if (paymentMethod === 'E-Wallet') setIsEWalletModalOpen(true);
+      else setIsSuccessModalOpen(true);
+    } catch (error) {
+      showErrorToast(error.message || 'Order could not be placed. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
-
-    clearCart();
-    setIsEWalletModalOpen(false);
-    setIsSuccessModalOpen(true);
   };
 
-  const handleConfirmEWalletPayment = (e) => {
+  const handleConfirmEWalletPayment = async (e) => {
     e.preventDefault();
     if (!eWalletRef.trim()) {
       showErrorToast('Please enter your E-Wallet reference number.');
       return;
     }
-    saveOrderToLocalStorage();
+    if (isSubmitting || !confirmedOrder) return;
+    setIsSubmitting(true);
+    try {
+      await submitPaymentReference(confirmedOrder.order_id, eWalletRef);
+      if (eWalletProof) await uploadPaymentProof(confirmedOrder.order_id, eWalletProof);
+      setIsEWalletModalOpen(false);
+      setIsSuccessModalOpen(true);
+    } catch (error) {
+      showErrorToast(error.message || 'Could not submit payment details. The order is saved in My Orders.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -295,11 +289,11 @@ export default function Checkout({ onBack, onOrderSuccess }) {
             <div>
               <h3 className="text-xs font-bold text-gray-800">SaWrap Address</h3>
               <p className="text-xs text-gray-500 mt-1 leading-relaxed">
-                Pamantasan ng Lungsod ng Maynila, General Luna Street, Intramuros, Manila, Metro Manila.
+                {storeContact.address}
               </p>
               <div className="mt-3">
                 <h4 className="text-[11px] font-bold text-gray-700">Contact No.</h4>
-                <p className="text-xs font-semibold text-gray-500">09399030522</p>
+                <p className="text-xs font-semibold text-gray-500">{storeContact.phone}</p>
               </div>
             </div>
           ) : (
@@ -325,10 +319,10 @@ export default function Checkout({ onBack, onOrderSuccess }) {
         <button
           type="button"
           onClick={handlePlaceOrderClick}
-          disabled={cartItems.length === 0}
+          disabled={cartItems.length === 0 || isSubmitting}
           className="w-full rounded-2xl bg-amber-400 py-3.5 text-center font-bold text-white shadow-md hover:bg-amber-500 active:scale-[0.98] transition-all cursor-pointer"
         >
-          Place Order (₱ {grandTotal.toFixed(2)})
+          {isSubmitting ? 'Placing order...' : `Place Order (${voucherCode ? 'discount applied next' : `₱ ${grandTotal.toFixed(2)}`})`}
         </button>
 
       </div>
@@ -339,7 +333,7 @@ export default function Checkout({ onBack, onOrderSuccess }) {
             <div className="flex items-center justify-between border-b border-gray-100 pb-3">
               <h3 className="text-base font-black text-gray-800">E-Wallet Transfer</h3>
               <button 
-                onClick={() => setIsEWalletModalOpen(false)} 
+                onClick={() => { setIsEWalletModalOpen(false); onOrderSuccess(); }}
                 className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-200 cursor-pointer"
               >
                 <X className="h-4 w-4" />
@@ -358,10 +352,11 @@ export default function Checkout({ onBack, onOrderSuccess }) {
               )}
 
               <div>
-                <span className="text-2xl font-black text-amber-600 tracking-wider">0939-903-0522</span>
-                <p className="text-[11px] text-gray-500 font-medium mt-0.5">Account Name: John Andrei T. (SaWrap)</p>
+                <span className="text-2xl font-black text-amber-600 tracking-wider">{ewalletAccount.number}</span>
+                <p className="text-[11px] text-gray-500 font-medium mt-0.5">Account Name: {ewalletAccount.name}</p>
               </div>
-              <p className="text-xs font-black text-gray-800 pt-1">Total Amount Due: ₱ {grandTotal.toFixed(2)}</p>
+              <p className="text-xs font-bold text-gray-700">Order {confirmedOrder?.order_code} is saved. Pay this exact amount, then enter your reference.</p>
+              <p className="text-xs font-black text-gray-800 pt-1">Total Amount Due: ₱ {((confirmedOrder?.total_centavos || 0) / 100).toFixed(2)}</p>
             </div>
 
             <form onSubmit={handleConfirmEWalletPayment} className="space-y-4">
@@ -390,9 +385,10 @@ export default function Checkout({ onBack, onOrderSuccess }) {
               <div className="pt-2">
                 <button
                   type="submit"
+                  disabled={isSubmitting}
                   className="w-full rounded-2xl bg-amber-400 py-3.5 text-xs font-black text-white shadow-md hover:bg-amber-500 transition-all cursor-pointer"
                 >
-                  Confirm Payment & Place Order
+                  {isSubmitting ? 'Placing order...' : 'Confirm Payment & Place Order'}
                 </button>
               </div>
             </form>
@@ -402,6 +398,8 @@ export default function Checkout({ onBack, onOrderSuccess }) {
 
       <OrderSuccessModal
         isOpen={isSuccessModalOpen}
+        orderCode={confirmedOrder?.order_code}
+        total={confirmedOrder?.total_centavos / 100}
         onClose={() => setIsSuccessModalOpen(false)}
         onViewOrders={() => {
           setIsSuccessModalOpen(false);
