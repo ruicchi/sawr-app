@@ -1,6 +1,6 @@
 # SaWrap code audit and Supabase backend guide
 
-**Status:** this is the audit of the original ZIP as received on 5 October 2026. Its references to browser storage and demo authentication describe the supplied baseline, which has since been replaced in the two source apps. See [the implementation and release guide](BACKEND_IMPLEMENTATION.md) for current behavior and live project status. The `combined` directory still contains the original static build.
+**Status:** this is the audit of the original ZIP as received on 5 October 2026. Its references to browser storage and demo authentication describe the supplied baseline, which has since been replaced in the two source apps. The owner later confirmed that the original 11 product names and prices are the actual menu; those products and three add-ons were restored in Supabase. Their seed stock counts still require a physical check. See [the implementation and release guide](BACKEND_IMPLEMENTATION.md) for current behavior and live project status. The `combined` directory still contains the original static build.
 
 ## 1. What the supplied code does today
 
@@ -53,7 +53,7 @@ The PDFs call this "10 localStorage keys" in one heading, but their own list and
 10. **Checkout's additional request is discarded.** `orderMessage` is collected in the UI but absent from the saved order. Add an `order_note` field if the store needs it.
 11. **Consent is checked but not recorded.** Sign-up requires the terms/privacy boxes, yet the saved user has no consent version or timestamp. If those acknowledgments matter as records, save document versions and accepted times server-side. This is a product/legal decision, not a reason to store checkbox state from an unauthenticated client as proof.
 12. **Browser storage and base64 images limit reliability.** Product, banner, avatar, and QR images can be stored as large data URLs. `safeSetItem` catches quota errors, but many callers ignore the result. Use Supabase Storage for files and save paths/metadata in Postgres.
-13. **Some screens still use demo data.** The admin seeds a sample order; catalog and vouchers also have seed records. Verify the real menu, prices, stock, and staff identities before importing. The PDFs are partially stale: they say vouchers are absent from the storefront, but checkout now has a code input; they say admin credentials are no longer hardcoded, but the code still contains a hardcoded fallback.
+13. **Some screens still use demo data.** The original admin seeds a sample order and voucher records. The catalog seed was later confirmed by the owner as the actual menu and imported separately; its stock values still need checking. The PDFs are partially stale: they say vouchers are absent from the storefront, but checkout now has a code input; they say admin credentials are no longer hardcoded, but the original code contains a hardcoded fallback.
 
 This is a source audit. It does not establish that the current build passes linting, runtime flows, cross-device tests, or a Supabase security review.
 
