@@ -10,3 +10,7 @@ See [the backend implementation and release guide](docs/BACKEND_IMPLEMENTATION.m
 for current status, local commands, database design, deployment roots, and
 remaining setup. The [original code audit](docs/SUPABASE_BACKEND_GUIDE.md)
 records problems found in the supplied ZIP.
+
+The [product image manifest](docs/CATALOG_IMAGE_MANIFEST.md) maps the owner-supplied
+photos to the eleven menu flavors. Source PNGs are in
+`sawrap-project/catalog-images/`.
