@@ -41,14 +41,14 @@ export default function BackendMessages() {
     {error && <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div>}
     {!identity ? <div className="rounded-3xl border border-gray-100 bg-white p-8 text-center text-sm text-gray-600">
       Sign in or place a guest order before messaging the store.
-    </div> : <div className="rounded-3xl border border-gray-100 bg-white p-4 shadow-sm">
+    </div> : <div className="min-w-0 rounded-3xl border border-gray-100 bg-white p-4 shadow-sm">
       <div className="flex items-center justify-between border-b pb-3"><strong>SaWrap Store</strong>
         {store?.phone && <a className="text-sm font-bold text-amber-700" href={`tel:${store.phone}`}>Call store</a>}</div>
-      <div className="my-3 h-[45vh] space-y-3 overflow-y-auto rounded-xl bg-gray-50 p-3">
+      <div className="my-3 h-[45vh] space-y-3 overflow-x-hidden overflow-y-auto rounded-xl bg-gray-50 p-3">
         {messages.length === 0 && <p className="text-center text-xs text-gray-500">No messages yet.</p>}
         {messages.map((message) => <div key={message.id}
-          className={`max-w-[85%] rounded-2xl p-3 text-sm ${message.sender === 'user' ? 'ml-auto bg-amber-100' : 'mr-auto bg-white border'}`}>
-          <p>{message.text}</p><time className="mt-1 block text-[10px] text-gray-500">{new Date(message.time).toLocaleString()}</time>
+          className={`min-w-0 max-w-[85%] rounded-2xl p-3 text-sm ${message.sender === 'user' ? 'ml-auto bg-amber-100' : 'mr-auto bg-white border'}`}>
+          <p className="whitespace-pre-wrap [overflow-wrap:anywhere]">{message.text}</p><time className="mt-1 block text-[10px] text-gray-500">{new Date(message.time).toLocaleString()}</time>
         </div>)}
       </div>
       <form onSubmit={send} className="flex gap-2"><input className="min-w-0 flex-1 rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-amber-400"

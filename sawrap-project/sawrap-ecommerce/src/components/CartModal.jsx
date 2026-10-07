@@ -1,5 +1,6 @@
 import { X, Trash2, Ticket } from 'lucide-react';
 import { useCart } from '../context/cart';
+import turonPlaceholder from '../assets/turon-placeholder.png';
 
 export default function CartModal({ isOpen, onClose, onProceedToCheckout }) {
   const {
@@ -58,12 +59,12 @@ export default function CartModal({ isOpen, onClose, onProceedToCheckout }) {
                 key={item.cartId}
                 className="flex items-center justify-between rounded-2xl bg-gray-50/80 p-3 border border-gray-100"
               >
-                <div className="flex items-center gap-3">
+                <div className="flex min-w-0 items-center gap-3">
                   <div className="h-12 w-12 flex-shrink-0 rounded-xl bg-amber-100 overflow-hidden flex items-center justify-center text-[10px] font-bold text-amber-700">
-                    Wrap
+                    <img src={item.image || turonPlaceholder} alt={item.name} className="h-full w-full object-cover" />
                   </div>
-                  <div>
-                    <h3 className="text-xs font-bold text-gray-800">{item.name}</h3>
+                  <div className="min-w-0">
+                    <h3 className="text-xs font-bold text-gray-800 [overflow-wrap:anywhere]">{item.name}</h3>
                     {item.selectedAddons && item.selectedAddons.length > 0 && (
                       <p className="text-[10px] text-gray-400">
                         + {item.selectedAddons.join(', ')}

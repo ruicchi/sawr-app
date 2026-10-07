@@ -337,24 +337,24 @@ export default function BackendDashboard({ onLogout }) {
           {data.vouchers.length === 0 && <p className={cardClass}>No vouchers yet.</p>}</div>
       </section>}
 
-      {data && tab === 'Messages' && <section className="grid gap-5 lg:grid-cols-[280px_1fr]">
-        <div className={`${cardClass} space-y-2`}><h2 className="font-black">Conversations</h2>
+      {data && tab === 'Messages' && <section className="grid min-w-0 gap-5 lg:grid-cols-[280px_minmax(0,1fr)]">
+        <div className={`${cardClass} min-w-0 space-y-2`}><h2 className="font-black">Conversations</h2>
           {data.conversations.map((chat) => <button key={chat.id} onClick={() => setSelectedConversation(chat.id)}
-            className={`block w-full rounded-xl p-3 text-left text-sm ${chat.id === selectedConversation ? 'bg-amber-100' : 'bg-gray-50'}`}>
+            className={`block w-full min-w-0 rounded-xl p-3 text-left text-sm [overflow-wrap:anywhere] ${chat.id === selectedConversation ? 'bg-amber-100' : 'bg-gray-50'}`}>
             <strong>{chat.customer_name || 'Customer'}</strong><span className="block text-xs text-gray-500">{chat.phone}</span></button>)}
           {data.conversations.length === 0 && <p className="text-sm text-gray-500">No conversations yet.</p>}</div>
-        <div className={`${cardClass} space-y-3`}>{selectedChat ? <>
-          <h2 className="font-black">{selectedChat.customer_name}</h2>
-          <div className="max-h-[50vh] space-y-2 overflow-y-auto rounded-xl bg-gray-50 p-3">
+        <div className={`${cardClass} min-w-0 space-y-3`}>{selectedChat ? <>
+          <h2 className="font-black [overflow-wrap:anywhere]">{selectedChat.customer_name}</h2>
+          <div className="max-h-[50vh] space-y-2 overflow-x-hidden overflow-y-auto rounded-xl bg-gray-50 p-3">
             {[...(selectedChat.messages || [])].sort((a, b) => a.created_at.localeCompare(b.created_at)).map((message) =>
-              <div key={message.id} className={`rounded-xl p-3 text-sm ${message.sender_role === 'staff' ? 'bg-amber-100' : 'bg-white'}`}>
-                <strong>{message.sender_role === 'staff' ? 'SaWrap' : 'Customer'}:</strong> {message.body}
+              <div key={message.id} className={`min-w-0 rounded-xl p-3 text-sm ${message.sender_role === 'staff' ? 'bg-amber-100' : 'bg-white'}`}>
+                <p className="whitespace-pre-wrap [overflow-wrap:anywhere]"><strong>{message.sender_role === 'staff' ? 'SaWrap' : 'Customer'}:</strong> {message.body}</p>
                 <span className="mt-1 block text-[10px] text-gray-500">{new Date(message.created_at).toLocaleString()}</span>
               </div>)}
           </div>
           <form onSubmit={(event) => { event.preventDefault(); if (!reply.trim()) return; run(async () => {
             await replyToCustomer(selectedChat.id, reply); setReply('');
-          }, 'Reply sent.'); }} className="flex gap-2"><input className={inputClass} value={reply} onChange={(e) => setReply(e.target.value)} placeholder="Reply to customer" />
+          }, 'Reply sent.'); }} className="flex min-w-0 gap-2"><input className={`${inputClass} min-w-0 flex-1`} value={reply} onChange={(e) => setReply(e.target.value)} placeholder="Reply to customer" />
             <button disabled={busy || !reply.trim()} className={buttonClass}>Send</button></form>
         </> : <p className="text-sm text-gray-500">Choose a conversation.</p>}</div>
       </section>}
