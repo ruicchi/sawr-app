@@ -52,14 +52,14 @@ export default function Header({ onOpenCart, onOpenNotification, onOpenAdminAuth
         </div>
 
         {/* Search Bar - Konektado na sa searchQuery at setSearchQuery */}
-        <div className="flex flex-1 items-center rounded-full bg-gray-100 px-4 py-2 md:max-w-md">
-          <Search className="mr-2 h-4 w-4 text-gray-400" />
+        <div className="flex min-w-0 flex-1 items-center rounded-full bg-gray-100 px-4 py-2 md:max-w-md">
+          <Search className="mr-2 h-4 w-4 shrink-0 text-gray-400" />
           <input
             type="text"
             placeholder="Search flavor or category..."
             value={searchQuery}
             onChange={(e) => setSearchQuery && setSearchQuery(e.target.value)}
-            className="w-full bg-transparent text-sm text-gray-700 outline-none"
+            className="min-w-0 w-full bg-transparent text-base text-gray-700 outline-none"
           />
         </div>
 
