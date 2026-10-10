@@ -141,8 +141,8 @@ function MainApp() {
             {/* Promo Banner (Itinatago kapag may hinahanap para mas pokus sa search results) */}
             {!searchQuery && (
               activeBanner?.image ? (
-                <div className="mb-6 h-44 w-full overflow-hidden rounded-3xl shadow-md md:h-64">
-                  <img src={activeBanner.image} alt="SaWrap Promo" className="h-full w-full object-cover" />
+                <div className="mb-6 w-full overflow-hidden rounded-3xl shadow-md">
+                  <img src={activeBanner.image} alt="SaWrap promo banner" className="block h-auto w-full" />
                 </div>
               ) : (
                 <div className="mb-6 flex h-44 w-full items-center justify-center rounded-3xl bg-amber-400 text-xl font-bold text-white shadow-md md:h-64">
