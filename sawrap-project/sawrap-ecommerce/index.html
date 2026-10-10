@@ -8,6 +8,13 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      // Supabase dashboard invitations use the Site URL. Hand staff invitations to
+      // the owner portal before either app can consume the one-time URL fragment.
+      if (new URLSearchParams(location.hash.slice(1)).get('type') === 'invite') {
+        location.replace('https://sawrap-admin.vercel.app/' + location.hash);
+      }
+    </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

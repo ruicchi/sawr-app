@@ -8,6 +8,10 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      // Keep the link purpose before Supabase removes the auth URL fragment.
+      window.__SAWRAP_AUTH_LINK_TYPE__ = new URLSearchParams(location.hash.slice(1)).get('type');
+    </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
