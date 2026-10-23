@@ -98,7 +98,7 @@ export default function OrderHistory({ onViewReceipt }) {
 
   const handleSubmitPayment = async (order) => {
     const reference = paymentRefs[order.id]?.trim();
-    if (!reference) { showToast('Enter your E-Wallet reference.', 'error'); return; }
+    if (!/^[0-9]{4,40}$/.test(reference || '')) { showToast('E-Wallet reference must be 4 to 40 digits.', 'error'); return; }
     try {
       await submitPaymentReference(order.databaseId, reference);
       if (proofFiles[order.id]) await uploadPaymentProof(order.databaseId, proofFiles[order.id]);
@@ -189,8 +189,9 @@ export default function OrderHistory({ onViewReceipt }) {
                     <p className="font-bold text-amber-900">Payment reference {order.eWalletRef} · {order.paymentState === 'verified' ? 'Verified' : order.paymentState === 'rejected' ? 'Rejected — contact the store' : 'Waiting for staff verification'}</p>
                   ) : (
                     <><p className="font-bold text-amber-900">Payment reference needed for order {order.id}. Amount due: ₱ {order.total.toFixed(2)}</p>
-                      <input className="w-full rounded-xl border border-amber-200 bg-white p-2" placeholder="E-Wallet reference number" value={paymentRefs[order.id] || ''}
-                        onChange={(e) => setPaymentRefs({ ...paymentRefs, [order.id]: e.target.value })} />
+                      <input type="text" inputMode="numeric" pattern="[0-9]{4,40}" minLength={4} maxLength={40}
+                        className="w-full rounded-xl border border-amber-200 bg-white p-2 text-base" placeholder="E-Wallet reference number" value={paymentRefs[order.id] || ''}
+                        onChange={(e) => setPaymentRefs({ ...paymentRefs, [order.id]: e.target.value.replace(/[^0-9]/g, '') })} />
                       <button className="rounded-xl bg-amber-400 px-4 py-2 font-bold text-white" onClick={() => handleSubmitPayment(order)}>Submit reference</button></>
                   )}
                   {order.paymentState === 'unverified' && !order.proofPath && <div className="space-y-2">
@@ -238,6 +239,7 @@ export default function OrderHistory({ onViewReceipt }) {
                         <div className="flex gap-2">
                           <input
                             type="text"
+                            maxLength={100}
                             placeholder="e.g. LM-123456 or Tracking ID"
                             value={order.courierReference || courierRefs[order.id] || ''}
                             onChange={(e) => setCourierRefs({ ...courierRefs, [order.id]: e.target.value })}

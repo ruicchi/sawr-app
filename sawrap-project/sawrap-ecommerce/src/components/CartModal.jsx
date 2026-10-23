@@ -60,8 +60,8 @@ export default function CartModal({ isOpen, onClose, onProceedToCheckout }) {
                 className="flex items-center justify-between rounded-2xl bg-gray-50/80 p-3 border border-gray-100"
               >
                 <div className="flex min-w-0 items-center gap-3">
-                  <div className="h-12 w-12 flex-shrink-0 rounded-xl bg-amber-100 overflow-hidden flex items-center justify-center text-[10px] font-bold text-amber-700">
-                    <img src={item.image || turonPlaceholder} alt={item.name} className="h-full w-full object-cover" />
+                  <div className="h-12 w-12 flex-shrink-0 rounded-xl bg-white overflow-hidden flex items-center justify-center text-[10px] font-bold text-amber-700">
+                    <img src={item.image || turonPlaceholder} alt={item.name} className="h-full w-full object-contain bg-white brightness-[1.06] contrast-[1.08]" />
                   </div>
                   <div className="min-w-0">
                     <h3 className="text-xs font-bold text-gray-800 [overflow-wrap:anywhere]">{item.name}</h3>
@@ -114,6 +114,7 @@ export default function CartModal({ isOpen, onClose, onProceedToCheckout }) {
             </span>
             <input
               type="text"
+              maxLength={32}
               placeholder="Enter code"
               value={voucherCode}
               onChange={(e) => setVoucherCode(e.target.value)}

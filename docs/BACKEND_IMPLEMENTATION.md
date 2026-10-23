@@ -1,10 +1,12 @@
 # SaWrap backend: implementation and release guide
 
-**Updated 5 October 2026.** The source apps now use Supabase. The `combined/` directory is the original static ZIP build and still contains browser-only data and demo authentication. Do not deploy `combined/` as the live store.
+**Updated 23 October 2026.** The source apps now use Supabase. The `combined/` directory is the original static ZIP build and still contains browser-only data and demo authentication. Do not deploy `combined/` as the live store.
 
 ## Current status
 
 The Supabase project is `cwhplubnatrlcutnulhj` (`https://cwhplubnatrlcutnulhj.supabase.co`). On 5 October 2026 the SQL in `supabase/migrations/` was applied through its SQL Editor. A live verification query found **17 application tables, all 17 with RLS enabled, five Storage buckets, and five order functions**; the later payment-reference function was applied successfully as well. Anonymous API tests were denied direct access to orders and staff records. Anonymous sign-in and manual account linking are enabled. The original menu was subsequently restored: **11 products and three add-ons** are in Supabase and visible on the deployed storefront.
+
+On 23 October 2026, the payment-reference digit validation trigger was applied through SQL Editor and read back from `pg_trigger`. It validates new or changed references while leaving existing payment records intact. The corresponding SQL migration is kept in this repository. The October bug fixes also add order date filtering, square white flavor image presentation, and input length limits in the source apps. These UI changes require a fresh deployment to both Vercel projects.
 
 Brevo custom SMTP is configured in Supabase Auth with a dedicated key. The SMTP key is stored only in the provider dashboards, not in this repository. Its sender is the verified `sebastianortelo984@gmail.com` address. Brevo flags this Gmail sender as a freemail domain without authenticated DKIM/DMARC; switch to a SaWrap-owned authenticated domain before public launch and test delivery. The dedicated key is set to expire on 5 October 2027, or after 90 days of inactivity under Brevo's current policy.
 
@@ -49,7 +51,7 @@ The app refreshes data on focus and at intervals. Realtime publication is enable
 
 ## Files and local run
 
-- Database migrations: `supabase/migrations/20261005090000_sawrap_core.sql`, `20261005091000_sawrap_order_functions.sql`, `20261005092000_sawrap_public_catalog_access.sql`, `20261005093000_sawrap_payment_capture.sql`, `20261005100000_sawrap_original_menu.sql`.
+- Database migrations: `supabase/migrations/20261005090000_sawrap_core.sql`, `20261005091000_sawrap_order_functions.sql`, `20261005092000_sawrap_public_catalog_access.sql`, `20261005093000_sawrap_payment_capture.sql`, `20261005100000_sawrap_original_menu.sql`, `20261023090000_sawrap_payment_reference_digits.sql`.
 - Storefront Vercel root: `sawrap-project/sawrap-ecommerce`.
 - Admin Vercel root: `sawrap-project/sawrap-admin-portal`.
 - Each app has `.env.example`. The real ignored `.env.local` files on this workstation contain the project URL and publishable key; Vercel CLI also added a local OIDC token. Never commit either `.env.local` file or either `.vercel/` directory.

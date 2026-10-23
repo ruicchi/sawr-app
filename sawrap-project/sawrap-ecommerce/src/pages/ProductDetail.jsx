@@ -82,9 +82,9 @@ export default function ProductDetail({ product, onBack, onGoToCheckout }) {
           
           {/* LEFT COLUMN: Product Image */}
           <div className="flex flex-col gap-4">
-            <div className="relative h-64 md:h-96 w-full rounded-2xl bg-gradient-to-b from-amber-50 to-amber-100/50 flex items-center justify-center border border-amber-100 shadow-inner overflow-hidden">
+            <div className="relative aspect-square w-full rounded-2xl bg-white flex items-center justify-center border border-gray-100 shadow-inner overflow-hidden">
               {product.image ? (
-                <img src={product.image} alt={product.name} className="h-full w-full object-cover" />
+                <img src={product.image} alt={product.name} className="h-full w-full object-contain brightness-[1.06] contrast-[1.08]" />
               ) : (
                 <div className="text-center p-6">
                   <span className="text-4xl md:text-6xl mb-2 block">🍌</span>

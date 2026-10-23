@@ -67,6 +67,8 @@ export default function Checkout({ onBack, onOrderSuccess }) {
       newErrors.name = 'Recipient name is required.';
     } else if (!/^[a-zA-Z\s]+$/.test(activeName)) {
       newErrors.name = 'Name must contain letters only.';
+    } else if (activeName.length > 120) {
+      newErrors.name = 'Recipient name must be 120 characters or fewer.';
     }
 
     const activePhone = user ? user.phone.replace(/[^0-9]/g, '') : guestPhone.replace(/[^0-9]/g, '');
@@ -80,6 +82,8 @@ export default function Checkout({ onBack, onOrderSuccess }) {
       const activeAddress = user ? (user.location || user.address) : guestAddress;
       if (!activeAddress || !activeAddress.trim()) {
         newErrors.address = 'Delivery address is required for courier delivery.';
+      } else if (activeAddress.length > 250) {
+        newErrors.address = 'Delivery address must be 250 characters or fewer.';
       }
     }
 
@@ -125,8 +129,8 @@ export default function Checkout({ onBack, onOrderSuccess }) {
 
   const handleConfirmEWalletPayment = async (e) => {
     e.preventDefault();
-    if (!eWalletRef.trim()) {
-      showErrorToast('Please enter your E-Wallet reference number.');
+    if (!/^[0-9]{4,40}$/.test(eWalletRef)) {
+      showErrorToast('E-Wallet reference must be 4 to 40 digits.');
       return;
     }
     if (isSubmitting || !confirmedOrder) return;
@@ -173,6 +177,7 @@ export default function Checkout({ onBack, onOrderSuccess }) {
                 <User className="h-4 w-4 text-gray-400 mr-2 flex-shrink-0" />
                 <input
                   type="text"
+                  maxLength={120}
                   placeholder="Recipient Name (Letters only)"
                   value={user ? user.name : guestName}
                   onChange={(e) => {
@@ -215,6 +220,7 @@ export default function Checkout({ onBack, onOrderSuccess }) {
             </span>
             <input
               type="text"
+              maxLength={32}
               placeholder="Enter code"
               value={voucherCode || ''}
               onChange={(e) => setVoucherCode(e.target.value)}
@@ -228,6 +234,7 @@ export default function Checkout({ onBack, onOrderSuccess }) {
             </span>
             <input
               type="text"
+              maxLength={1000}
               placeholder="Additional requests"
               value={orderMessage}
               onChange={(e) => setOrderMessage(e.target.value)}
@@ -305,6 +312,7 @@ export default function Checkout({ onBack, onOrderSuccess }) {
                 <MapPin className="h-4 w-4 text-gray-400 mr-2 flex-shrink-0" />
                 <input
                   type="text"
+                  maxLength={250}
                   placeholder="Enter complete delivery location"
                   value={user ? (user.location || user.address) : guestAddress}
                   onChange={(e) => user ? setUser({ ...user, location: e.target.value }) : setGuestAddress(e.target.value)}
@@ -364,10 +372,14 @@ export default function Checkout({ onBack, onOrderSuccess }) {
                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider block mb-1">E-Wallet Reference Number</label>
                 <input
                   type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]{4,40}"
+                  minLength={4}
+                  maxLength={40}
                   placeholder="e.g. 1029384756"
                   value={eWalletRef}
-                  onChange={(e) => setEWalletRef(e.target.value)}
-                  className="w-full rounded-2xl bg-gray-50 border border-gray-200 px-4 py-3 text-xs font-bold text-gray-800 outline-none focus:border-amber-400"
+                  onChange={(e) => setEWalletRef(e.target.value.replace(/[^0-9]/g, ''))}
+                  className="w-full rounded-2xl bg-gray-50 border border-gray-200 px-4 py-3 text-base font-bold text-gray-800 outline-none focus:border-amber-400"
                   required
                 />
               </div>

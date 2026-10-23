@@ -96,10 +96,10 @@ export default function BackendProfile({ authLinkType, onAuthLinkHandled, onNavi
     {mode === 'profile' && account && <>
       <form onSubmit={saveProfile} className="space-y-3 rounded-3xl border border-gray-100 bg-white p-5 shadow-sm">
         <h2 className="font-bold">Account details</h2>
-        <label className="block text-xs font-bold">Name<input required className={fieldClass} value={form.name} onChange={change('name')} /></label>
-        <label className="block text-xs font-bold">Email<input required type="email" className={fieldClass} value={form.email} onChange={change('email')} /></label>
-        <label className="block text-xs font-bold">Mobile number<input required className={fieldClass} value={form.phone} onChange={change('phone')} /></label>
-        <label className="block text-xs font-bold">Address<input className={fieldClass} value={form.address} onChange={change('address')} /></label>
+        <label className="block text-xs font-bold">Name<input required maxLength={120} className={fieldClass} value={form.name} onChange={change('name')} /></label>
+        <label className="block text-xs font-bold">Email<input required type="email" maxLength={254} className={fieldClass} value={form.email} onChange={change('email')} /></label>
+        <label className="block text-xs font-bold">Mobile number<input required maxLength={30} className={fieldClass} value={form.phone} onChange={change('phone')} /></label>
+        <label className="block text-xs font-bold">Address<input maxLength={250} className={fieldClass} value={form.address} onChange={change('address')} /></label>
         <button disabled={busy} className={buttonClass}>Save profile</button>
       </form>
       <button type="button" onClick={() => onNavigate?.('orders')} className={buttonClass}>My orders</button>
@@ -110,7 +110,7 @@ export default function BackendProfile({ authLinkType, onAuthLinkHandled, onNavi
 
     {mode === 'login' && <form onSubmit={logIn} className="space-y-3 rounded-3xl border border-gray-100 bg-white p-5 shadow-sm">
       <h2 className="font-bold">Log in</h2>
-      <input required type="email" placeholder="Email" className={fieldClass} value={form.email} onChange={change('email')} />
+      <input required type="email" maxLength={254} placeholder="Email" className={fieldClass} value={form.email} onChange={change('email')} />
       <input required type="password" placeholder="Password" className={fieldClass} value={form.password} onChange={change('password')} />
       <button disabled={busy} className={buttonClass}>Log in</button>
       <button type="button" onClick={() => { setMode('signup'); setError(''); }} className="block text-sm font-bold text-amber-700">Create an account</button>
@@ -119,10 +119,10 @@ export default function BackendProfile({ authLinkType, onAuthLinkHandled, onNavi
 
     {mode === 'signup' && <form onSubmit={signUp} className="space-y-3 rounded-3xl border border-gray-100 bg-white p-5 shadow-sm">
       <h2 className="font-bold">{isGuest ? 'Keep your guest account' : 'Create an account'}</h2>
-      <input required placeholder="Full name" className={fieldClass} value={form.name} onChange={change('name')} />
-      <input required type="email" placeholder="Email" className={fieldClass} value={form.email} onChange={change('email')} />
-      <input required placeholder="Mobile number" className={fieldClass} value={form.phone} onChange={change('phone')} />
-      <input placeholder="Address" className={fieldClass} value={form.address} onChange={change('address')} />
+      <input required maxLength={120} placeholder="Full name" className={fieldClass} value={form.name} onChange={change('name')} />
+      <input required type="email" maxLength={254} placeholder="Email" className={fieldClass} value={form.email} onChange={change('email')} />
+      <input required maxLength={30} placeholder="Mobile number" className={fieldClass} value={form.phone} onChange={change('phone')} />
+      <input maxLength={250} placeholder="Address" className={fieldClass} value={form.address} onChange={change('address')} />
       {!isGuest && <><input required type="password" placeholder="Password (8+ characters)" className={fieldClass} value={form.password} onChange={change('password')} />
         <input required type="password" placeholder="Confirm password" className={fieldClass} value={form.confirm} onChange={change('confirm')} /></>}
       <button disabled={busy} className={buttonClass}>{isGuest ? 'Send confirmation email' : 'Sign up'}</button>
@@ -131,7 +131,7 @@ export default function BackendProfile({ authLinkType, onAuthLinkHandled, onNavi
 
     {mode === 'forgot' && <form onSubmit={resetRequest} className="space-y-3 rounded-3xl border border-gray-100 bg-white p-5 shadow-sm">
       <h2 className="font-bold">Reset password</h2>
-      <input required type="email" placeholder="Your account email" className={fieldClass} value={form.email} onChange={change('email')} />
+      <input required type="email" maxLength={254} placeholder="Your account email" className={fieldClass} value={form.email} onChange={change('email')} />
       <button disabled={busy} className={buttonClass}>Email me a reset link</button>
       <button type="button" onClick={() => setMode('login')} className="block text-sm text-gray-500">Back to login</button>
     </form>}

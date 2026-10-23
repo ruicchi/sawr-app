@@ -187,6 +187,9 @@ export async function uploadPaymentProof(orderId, file) {
 }
 
 export async function submitPaymentReference(orderId, reference) {
+  if (!/^[0-9]{4,40}$/.test(reference)) {
+    throw new Error('E-Wallet reference must be 4 to 40 digits, with no letters or spaces.');
+  }
   fail(await requireSupabase().rpc('submit_payment_reference', {
     p_order_id: orderId, p_reference: reference,
   }));

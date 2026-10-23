@@ -70,6 +70,16 @@ export async function loadAdminData() {
   };
 }
 
+export async function loadAdminOrders({ start, end, offset = 0, pageSize = 100 } = {}) {
+  let query = requireSupabase().from('orders')
+    .select('*, order_items(*, order_item_addons(*)), payments(*)')
+    .order('created_at', { ascending: false })
+    .range(offset, offset + pageSize - 1);
+  if (start) query = query.gte('created_at', start);
+  if (end) query = query.lt('created_at', end);
+  return value(await query);
+}
+
 export async function saveProduct(form, file) {
   const db = requireSupabase();
   const imagePath = file ? await uploadImage('catalog-images', file) : form.image_path || null;

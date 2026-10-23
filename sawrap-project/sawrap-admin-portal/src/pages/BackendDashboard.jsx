@@ -1,14 +1,15 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   DollarSign, Image as ImageIcon, Layers, LogOut, MessageSquare,
   Plus, RotateCcw, Settings, ShoppingBag, Store, Tag, Trash2,
 } from 'lucide-react';
 import sawrapLogo from '../assets/sawrap-logo.png';
 import {
-  loadAdminData, publicImage, replyToCustomer, saveAddon, saveBanner, saveProduct,
+  loadAdminData, loadAdminOrders, publicImage, replyToCustomer, saveAddon, saveBanner, saveProduct,
   saveStore, saveVoucher, setAddonDeleted, setBannerDeleted, setProductDeleted,
   setVoucherDeleted, signedPaymentProof, transitionOrder, verifyPayment,
 } from '../lib/api';
+import { orderDateRange } from '../lib/orderDates';
 
 const emptyProduct = { name: '', category: 'Sakto', description: '', price: '', stock: 0,
   sort_order: 0, is_available: true, image_path: null };
@@ -50,19 +51,69 @@ export default function BackendDashboard({ onLogout }) {
   const [selectedConversation, setSelectedConversation] = useState(null);
   const [reply, setReply] = useState('');
   const [cancelReasons, setCancelReasons] = useState({});
+  const [orderPreset, setOrderPreset] = useState('all');
+  const [customFrom, setCustomFrom] = useState('');
+  const [customTo, setCustomTo] = useState('');
+  const [visibleOrders, setVisibleOrders] = useState([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+  const [ordersHasMore, setOrdersHasMore] = useState(false);
+  const orderRequest = useRef(0);
+  const activeRangeKey = useRef(null);
+  const shownOrderCount = useRef(0);
+  const dateRange = orderDateRange(orderPreset, customFrom, customTo);
+
+  useEffect(() => { shownOrderCount.current = visibleOrders.length; }, [visibleOrders.length]);
 
   const refresh = useCallback(async () => {
+    const request = ++orderRequest.current;
     try {
-      const rows = await loadAdminData();
+      setOrdersLoading(true);
+      const range = orderDateRange(orderPreset, customFrom, customTo);
+      const rangeKey = JSON.stringify(range);
+      const [rows, orders] = await Promise.all([
+        loadAdminData(),
+        range ? loadAdminOrders(range) : Promise.resolve([]),
+      ]);
+      if (request !== orderRequest.current) return;
       setData(rows);
+      if (rangeKey !== activeRangeKey.current || shownOrderCount.current <= 100) {
+        activeRangeKey.current = rangeKey;
+        shownOrderCount.current = orders.length;
+        setVisibleOrders(orders);
+        setOrdersHasMore(orders.length === 100);
+      } else {
+        setVisibleOrders((previous) => {
+          const seen = new Set(orders.map((order) => order.id));
+          return [...orders, ...previous.filter((order) => !seen.has(order.id))];
+        });
+      }
       setStoreDraft((previous) => previous || rows.store);
       setError('');
     } catch (cause) {
-      setError(cause.message || 'Could not load admin data.');
+      if (request === orderRequest.current) setError(cause.message || 'Could not load admin data.');
     } finally {
-      setLoading(false);
+      if (request === orderRequest.current) { setLoading(false); setOrdersLoading(false); }
     }
-  }, []);
+  }, [orderPreset, customFrom, customTo]);
+
+  const loadMoreOrders = async () => {
+    if (ordersLoading || !dateRange) return;
+    const request = orderRequest.current;
+    setOrdersLoading(true);
+    try {
+      const page = await loadAdminOrders({ ...dateRange, offset: visibleOrders.length });
+      if (request !== orderRequest.current) return;
+      setVisibleOrders((previous) => {
+        const seen = new Set(previous.map((order) => order.id));
+        return [...previous, ...page.filter((order) => !seen.has(order.id))];
+      });
+      setOrdersHasMore(page.length === 100);
+    } catch (cause) {
+      if (request === orderRequest.current) setError(cause.message || 'Could not load more orders.');
+    } finally {
+      if (request === orderRequest.current) setOrdersLoading(false);
+    }
+  };
 
   useEffect(() => {
     const firstLoad = setTimeout(refresh, 0);
@@ -88,7 +139,7 @@ export default function BackendDashboard({ onLogout }) {
   };
 
   const tabs = [
-    { name: 'Orders', label: 'Incoming Orders', icon: ShoppingBag, count: data?.orders.length },
+    { name: 'Orders', label: 'Incoming Orders', icon: ShoppingBag, count: visibleOrders.length },
     { name: 'Products', label: 'Store Menu', icon: Store, count: data?.products.filter((item) => !item.deleted_at).length },
     { name: 'Add-ons', label: 'Add-ons', icon: Layers, count: data?.addons.filter((item) => !item.deleted_at).length },
     { name: 'Banners', label: 'Promo Banners', icon: ImageIcon, count: data?.banners.filter((item) => !item.deleted_at).length },
@@ -139,8 +190,20 @@ export default function BackendDashboard({ onLogout }) {
 
       {data && tab === 'Orders' && <section className="space-y-4">
         <div className="flex items-center justify-between"><h2 className="text-base font-black">Incoming Orders & Verification</h2><button className={secondaryButton} onClick={refresh}>Refresh</button></div>
-        {data.orders.length === 0 && <p className={cardClass}>No orders yet.</p>}
-        {data.orders.map((order) => {
+        <div className={`${cardClass} flex flex-wrap items-end gap-3`}>
+          <Field label="Order date"><select className={inputClass} value={orderPreset} onChange={(event) => setOrderPreset(event.target.value)}>
+            <option value="all">All dates</option><option value="today">Today</option><option value="week">Last 7 days</option>
+            <option value="month">Last 30 days</option><option value="custom">Custom range</option>
+          </select></Field>
+          {orderPreset === 'custom' && <>
+            <Field label="From"><input type="date" className={inputClass} value={customFrom} onChange={(event) => setCustomFrom(event.target.value)} /></Field>
+            <Field label="Through"><input type="date" className={inputClass} min={customFrom || undefined} value={customTo} onChange={(event) => setCustomTo(event.target.value)} /></Field>
+          </>}
+          <span className="text-xs text-gray-500">{dateRange ? `${visibleOrders.length} orders shown` : 'Select a valid start and end date.'}</span>
+        </div>
+        {ordersLoading && visibleOrders.length === 0 && <p className={cardClass}>Loading orders...</p>}
+        {!ordersLoading && dateRange && visibleOrders.length === 0 && <p className={cardClass}>No orders in this date range.</p>}
+        {visibleOrders.map((order) => {
           const payment = paymentOf(order);
           const nextStatus = { Pending: 'Preparing', Preparing: 'Ready', Ready: 'Completed' }[order.status];
           return <article key={order.id} className={cardClass}>
@@ -174,13 +237,16 @@ export default function BackendDashboard({ onLogout }) {
             <div className="mt-3 flex flex-wrap gap-2">
               {nextStatus && <button disabled={busy} className={buttonClass} onClick={() => run(() => transitionOrder(order.id, nextStatus), `Order moved to ${nextStatus}.`)}>
                 {order.status === 'Pending' ? 'Accept and deduct stock' : `Mark ${nextStatus}`}</button>}
-              {order.status === 'Pending' && <><input className={`${inputClass} max-w-xs`} placeholder="Cancellation reason"
+              {order.status === 'Pending' && <><input className={`${inputClass} max-w-xs`} maxLength={500} placeholder="Cancellation reason"
                 value={cancelReasons[order.id] || ''} onChange={(event) => setCancelReasons({ ...cancelReasons, [order.id]: event.target.value })} />
                 <button disabled={busy || !cancelReasons[order.id]?.trim()} className={secondaryButton}
                   onClick={() => run(() => transitionOrder(order.id, 'Cancelled', cancelReasons[order.id]), 'Order cancelled.')}>Cancel order</button></>}
             </div>
           </article>;
         })}
+        {ordersHasMore && <button type="button" disabled={ordersLoading} onClick={loadMoreOrders} className={secondaryButton}>
+          {ordersLoading ? 'Loading...' : 'Load older orders'}
+        </button>}
       </section>}
 
       {data && tab === 'Products' && <section className="space-y-4">
@@ -202,8 +268,8 @@ export default function BackendDashboard({ onLogout }) {
           {data.products.filter((item) => productFilter === 'Trash' ? !!item.deleted_at : !item.deleted_at).map((item) => <article key={item.id}
             className={`flex flex-col justify-between space-y-2 rounded-2xl border bg-white p-3 shadow-sm ${item.deleted_at || !item.is_available || item.stock === 0 ? 'border-red-200' : 'border-gray-100'}`}>
             <div>
-              <div className="mb-2 flex h-24 items-center justify-center overflow-hidden rounded-xl border border-amber-100 bg-amber-50 px-1 text-center text-[11px] font-bold text-amber-600 sm:h-28">
-                {item.image_url ? <img src={item.image_url} alt={item.name} className="h-full w-full object-cover" /> : `${item.name} Image`}
+              <div className="mb-2 flex aspect-square w-full items-center justify-center overflow-hidden rounded-xl border border-gray-100 bg-white text-center text-[11px] font-bold text-amber-600">
+                {item.image_url ? <img src={item.image_url} alt={item.name} className="h-full w-full object-contain brightness-[1.06] contrast-[1.08]" /> : `${item.name} Image`}
               </div>
               <div className="flex items-center justify-between gap-1"><span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-600">{item.category}</span>
                 <span className="text-[10px] font-black text-gray-600">Stock: {item.stock}</span></div>
@@ -237,10 +303,10 @@ export default function BackendDashboard({ onLogout }) {
               await saveProduct(productDraft, productFile); setProductDraft(emptyProduct); setProductFile(null); setShowProductForm(false);
             }, 'Product saved.'); }}>
             <h2 className="text-lg font-black">{productDraft.id ? 'Edit Flavor Item' : 'Add Flavor Item'}</h2>
-            <Field label="Name"><input required className={inputClass} value={productDraft.name} onChange={(e) => setProductDraft({ ...productDraft, name: e.target.value })} /></Field>
+            <Field label="Name"><input required maxLength={120} className={inputClass} value={productDraft.name} onChange={(e) => setProductDraft({ ...productDraft, name: e.target.value })} /></Field>
             <Field label="Category"><select className={inputClass} value={productDraft.category} onChange={(e) => setProductDraft({ ...productDraft, category: e.target.value })}>
               {['Sakto', 'Sarap', 'Sagad'].map((value) => <option key={value}>{value}</option>)}</select></Field>
-            <Field label="Description"><textarea className={inputClass} value={productDraft.description} onChange={(e) => setProductDraft({ ...productDraft, description: e.target.value })} /></Field>
+            <Field label="Description"><textarea maxLength={1000} className={inputClass} value={productDraft.description} onChange={(e) => setProductDraft({ ...productDraft, description: e.target.value })} /></Field>
             <div className="grid grid-cols-2 gap-2"><Field label="Price (PHP)"><input required type="number" min="0" step="0.01" className={inputClass} value={productDraft.price} onChange={(e) => setProductDraft({ ...productDraft, price: e.target.value })} /></Field>
               <Field label="Stock"><input required type="number" min="0" step="1" className={inputClass} value={productDraft.stock} onChange={(e) => setProductDraft({ ...productDraft, stock: e.target.value })} /></Field></div>
             <Field label="Sort order"><input type="number" className={inputClass} value={productDraft.sort_order} onChange={(e) => setProductDraft({ ...productDraft, sort_order: e.target.value })} /></Field>
@@ -288,7 +354,7 @@ export default function BackendDashboard({ onLogout }) {
               await saveAddon(addonDraft); setAddonDraft(emptyAddon); setShowAddonForm(false);
             }, 'Add-on saved.'); }}>
             <h2 className="text-lg font-black">{addonDraft.id ? 'Edit Add-on' : 'Add New Add-on'}</h2>
-            <Field label="Name"><input required className={inputClass} value={addonDraft.name} onChange={(e) => setAddonDraft({ ...addonDraft, name: e.target.value })} /></Field>
+            <Field label="Name"><input required maxLength={120} className={inputClass} value={addonDraft.name} onChange={(e) => setAddonDraft({ ...addonDraft, name: e.target.value })} /></Field>
             <Field label="Price (PHP)"><input required type="number" min="0" step="0.01" className={inputClass} value={addonDraft.price} onChange={(e) => setAddonDraft({ ...addonDraft, price: e.target.value })} /></Field>
             <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={addonDraft.is_available} onChange={(e) => setAddonDraft({ ...addonDraft, is_available: e.target.checked })} />Available</label>
             <div className="flex justify-end gap-2"><button type="button" className={secondaryButton} onClick={() => setShowAddonForm(false)}>Cancel</button>
@@ -317,7 +383,7 @@ export default function BackendDashboard({ onLogout }) {
         <form className={`${cardClass} h-fit space-y-3`} onSubmit={(event) => { event.preventDefault(); run(async () => {
           await saveVoucher(voucherDraft); setVoucherDraft(emptyVoucher);
         }, 'Voucher saved.'); }}><h2 className="font-black">{voucherDraft.id ? 'Edit voucher' : 'Add voucher'}</h2>
-          <Field label="Code"><input required className={inputClass} value={voucherDraft.code} onChange={(e) => setVoucherDraft({ ...voucherDraft, code: e.target.value.toUpperCase() })} /></Field>
+          <Field label="Code"><input required maxLength={32} className={inputClass} value={voucherDraft.code} onChange={(e) => setVoucherDraft({ ...voucherDraft, code: e.target.value.toUpperCase() })} /></Field>
           <Field label="Type"><select className={inputClass} value={voucherDraft.discount_type} onChange={(e) => setVoucherDraft({ ...voucherDraft, discount_type: e.target.value })}><option value="fixed">Fixed PHP</option><option value="percent">Percent</option></select></Field>
           <Field label={voucherDraft.discount_type === 'fixed' ? 'Discount (PHP)' : 'Discount (%)'}><input required type="number" min="1" step={voucherDraft.discount_type === 'fixed' ? '0.01' : '1'} className={inputClass} value={voucherDraft.discount_value} onChange={(e) => setVoucherDraft({ ...voucherDraft, discount_value: e.target.value })} /></Field>
           <Field label="Minimum spend (PHP)"><input type="number" min="0" step="0.01" className={inputClass} value={voucherDraft.min_spend} onChange={(e) => setVoucherDraft({ ...voucherDraft, min_spend: e.target.value })} /></Field>
@@ -354,7 +420,7 @@ export default function BackendDashboard({ onLogout }) {
           </div>
           <form onSubmit={(event) => { event.preventDefault(); if (!reply.trim()) return; run(async () => {
             await replyToCustomer(selectedChat.id, reply); setReply('');
-          }, 'Reply sent.'); }} className="flex min-w-0 gap-2"><input className={`${inputClass} min-w-0 flex-1`} value={reply} onChange={(e) => setReply(e.target.value)} placeholder="Reply to customer" />
+          }, 'Reply sent.'); }} className="flex min-w-0 gap-2"><input className={`${inputClass} min-w-0 flex-1`} maxLength={4000} value={reply} onChange={(e) => setReply(e.target.value)} placeholder="Reply to customer" />
             <button disabled={busy || !reply.trim()} className={buttonClass}>Send</button></form>
         </> : <p className="text-sm text-gray-500">Choose a conversation.</p>}</div>
       </section>}
@@ -362,7 +428,7 @@ export default function BackendDashboard({ onLogout }) {
       {data && tab === 'Settings' && storeDraft && <form className={`${cardClass} max-w-xl space-y-3`} onSubmit={(event) => { event.preventDefault(); run(() => saveStore(storeDraft, qrFile), 'Store settings saved.'); }}>
         <h2 className="font-black">Store settings</h2>
         {['name', 'phone', 'address', 'hours', 'ewallet_account_name', 'ewallet_account_number'].map((field) => <Field key={field} label={field.replaceAll('_', ' ')}>
-          <input className={inputClass} value={storeDraft[field] || ''} onChange={(e) => setStoreDraft({ ...storeDraft, [field]: e.target.value })} /></Field>)}
+          <input className={inputClass} maxLength={field === 'address' ? 250 : field === 'hours' ? 120 : 80} value={storeDraft[field] || ''} onChange={(e) => setStoreDraft({ ...storeDraft, [field]: e.target.value })} /></Field>)}
         {storeDraft.qr_image_path && <img src={publicImage('store-assets', storeDraft.qr_image_path)} alt="Store payment QR" className="h-36 w-36 rounded-xl object-contain" />}
         <Field label="Payment QR image"><input type="file" accept="image/jpeg,image/png,image/webp" className={inputClass} onChange={(e) => setQrFile(e.target.files[0] || null)} /></Field>
         <p className="text-xs text-gray-500">E-Wallet checkout stays disabled until you enter the confirmed account number here.</p>

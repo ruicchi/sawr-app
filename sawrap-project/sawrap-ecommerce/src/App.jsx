@@ -203,9 +203,9 @@ function MainApp() {
                       </span>
                     )}
                     <div>
-                      <div className="mb-3 h-32 w-full rounded-xl bg-amber-50 flex items-center justify-center text-xs font-semibold text-amber-700 text-center px-2 overflow-hidden">
+                      <div className="mb-3 aspect-square w-full rounded-xl bg-white flex items-center justify-center text-xs font-semibold text-amber-700 text-center overflow-hidden">
                         {item.image ? (
-                          <img src={item.image} alt={item.name} className="h-full w-full object-cover" />
+                          <img src={item.image} alt={item.name} className="h-full w-full object-contain brightness-[1.06] contrast-[1.08]" />
                         ) : (
                           <span>{item.name} Image</span>
                         )}

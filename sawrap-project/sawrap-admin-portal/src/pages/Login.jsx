@@ -107,6 +107,7 @@ export default function Login({ authLinkType, onLoginSuccess, onSetupComplete, o
               <Store className="h-4 w-4 text-gray-400 mr-3 flex-shrink-0" />
               <input
                 type="email"
+                maxLength={254}
                 placeholder="Enter your email"
                 value={email}
                 onChange={(e) => { setEmail(e.target.value); setError(''); }}
