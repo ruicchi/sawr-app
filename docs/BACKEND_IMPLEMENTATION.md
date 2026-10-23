@@ -6,7 +6,7 @@
 
 The Supabase project is `cwhplubnatrlcutnulhj` (`https://cwhplubnatrlcutnulhj.supabase.co`). On 5 October 2026 the SQL in `supabase/migrations/` was applied through its SQL Editor. A live verification query found **17 application tables, all 17 with RLS enabled, five Storage buckets, and five order functions**; the later payment-reference function was applied successfully as well. Anonymous API tests were denied direct access to orders and staff records. Anonymous sign-in and manual account linking are enabled. The original menu was subsequently restored: **11 products and three add-ons** are in Supabase and visible on the deployed storefront.
 
-On 23 October 2026, the payment-reference digit validation trigger was applied through SQL Editor and read back from `pg_trigger`. It validates new or changed references while leaving existing payment records intact. The corresponding SQL migration is kept in this repository. The October bug fixes also add order date filtering, square white flavor image presentation, and input length limits in the source apps. These UI changes require a fresh deployment to both Vercel projects.
+On 23 October 2026, the payment-reference digit validation trigger was applied through SQL Editor and read back from `pg_trigger`. It validates new or changed references while leaving existing payment records intact. The corresponding SQL migration is kept in this repository. The October bug fixes also add order date filtering, square white flavor image presentation, and input length limits. Commit `91f4647` was deployed to both existing protected Vercel projects; the production aliases served the updated bundles in an authenticated Vercel CLI check.
 
 Brevo custom SMTP is configured in Supabase Auth with a dedicated key. The SMTP key is stored only in the provider dashboards, not in this repository. Its sender is the verified `sebastianortelo984@gmail.com` address. Brevo flags this Gmail sender as a freemail domain without authenticated DKIM/DMARC; switch to a SaWrap-owned authenticated domain before public launch and test delivery. The dedicated key is set to expire on 5 October 2027, or after 90 days of inactivity under Brevo's current policy.
 
@@ -73,6 +73,8 @@ npm run dev
 Both apps need `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` in `.env.local` for local work, and the same two environment variables in their respective Vercel projects for deployments. The storefront's read-only backend check is `node scripts/verify-backend.mjs` after `.env.local` exists.
 
 Until Git is connected, redeploy the existing Vercel projects manually from this linked workstation after checking out the intended branch:
+
+First confirm `vercel whoami` shows `sebastianortelo984-3827`. The AGOR Vercel account cannot deploy these projects. If this workstation is using another Vercel account, use a separate CLI global-config directory for the SaWrap login and supply `--global-config <that-directory>` to the deploy commands below.
 
 ```powershell
 cd sawrap-project/sawrap-ecommerce
