@@ -1,1 +1,16 @@
 @import "tailwindcss";
+
+@media print {
+  body:has(.sales-print) #root,
+  .sales-analytics-dialog {
+    display: none !important;
+  }
+
+  .sales-print {
+    display: block !important;
+  }
+
+  .sales-print tr {
+    break-inside: avoid;
+  }
+}

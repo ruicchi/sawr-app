@@ -4,6 +4,7 @@ import {
   Plus, RotateCcw, Settings, ShoppingBag, Store, Tag, Trash2,
 } from 'lucide-react';
 import sawrapLogo from '../assets/sawrap-logo.png';
+import SalesAnalytics from '../components/SalesAnalytics';
 import {
   loadAdminData, loadAdminOrders, publicImage, replyToCustomer, saveAddon, saveBanner, saveProduct,
   saveStore, saveVoucher, setAddonDeleted, setBannerDeleted, setProductDeleted,
@@ -31,6 +32,7 @@ function Field({ label, children }) {
 
 export default function BackendDashboard({ onLogout }) {
   const [tab, setTab] = useState('Orders');
+  const [showSales, setShowSales] = useState(false);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -167,14 +169,19 @@ export default function BackendDashboard({ onLogout }) {
       <div className="grid grid-cols-2 gap-2.5 sm:gap-4 lg:grid-cols-4" aria-label="Store overview">
         {[
           { label: 'Total Orders', value: data?.orders.length ?? '—', icon: ShoppingBag, section: 'Orders' },
-          { label: 'Completed Sales', value: pesos(completedSales), icon: DollarSign, section: 'Orders' },
+          { label: 'Completed Sales', value: data ? pesos(completedSales) : '—', icon: DollarSign, section: 'Sales' },
           { label: 'Menu Flavors', value: data?.products.filter((item) => !item.deleted_at).length ?? '—', icon: Store, section: 'Products' },
           { label: 'Client Chats', value: data?.conversations.length ?? '—', icon: MessageSquare, section: 'Messages' },
-        ].map(({ label, value, icon: Icon, section }) => <button key={label} type="button" onClick={() => setTab(section)}
+        ].map(({ label, value, icon: Icon, section }) => <button key={label} type="button" aria-haspopup={section === 'Sales' ? 'dialog' : undefined}
+          onClick={() => section === 'Sales' ? setShowSales(true) : setTab(section)}
           className="flex min-w-0 items-center gap-3 rounded-2xl border border-gray-100 bg-white p-3.5 text-left shadow-sm transition hover:border-amber-400 hover:shadow-md sm:p-5">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-amber-100 text-amber-600 sm:h-12 sm:w-12"><Icon className="h-5 w-5" /></span>
           <span className="min-w-0"><span className="block text-[10px] font-extrabold uppercase tracking-wider text-gray-400 sm:text-xs">{label}</span>
-            <span className="mt-0.5 block truncate text-lg font-black text-gray-800 sm:text-xl">{value}</span></span>
+            <span className="mt-0.5 block truncate text-lg font-black text-gray-800 sm:text-xl">{value}</span>
+            {section === 'Sales' && <>
+              {data?.orders.length === 200 && <span className="block text-[10px] text-gray-600">From the latest 200 orders</span>}
+              <span className="block text-[10px] font-bold text-amber-800">View Analytics →</span>
+            </>}</span>
         </button>)}
       </div>
       <nav className="flex gap-2 overflow-x-auto pb-2" aria-label="Admin sections">
@@ -435,5 +442,6 @@ export default function BackendDashboard({ onLogout }) {
         <button disabled={busy} className={buttonClass}>Save settings</button>
       </form>}
     </main>
+    {showSales && <SalesAnalytics onClose={() => setShowSales(false)} />}
   </div>;
 }

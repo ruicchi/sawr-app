@@ -80,6 +80,27 @@ export async function loadAdminOrders({ start, end, offset = 0, pageSize = 100 }
   return value(await query);
 }
 
+export async function loadCompletedSales({ start, end }, signal) {
+  const db = requireSupabase();
+  const pageSize = 200;
+  const orders = [];
+  let lastId;
+
+  for (;;) {
+    let query = db.from('orders')
+      .select('id, subtotal_centavos, discount_centavos, total_centavos, order_items(product_id, product_name, category, quantity, line_total_centavos)')
+      .eq('status', 'Completed').order('id').limit(pageSize).abortSignal(signal);
+    if (start) query = query.gte('created_at', start);
+    if (end) query = query.lt('created_at', end);
+    if (lastId) query = query.gt('id', lastId);
+
+    const page = value(await query);
+    orders.push(...page);
+    if (page.length < pageSize) return orders;
+    lastId = page.at(-1).id;
+  }
+}
+
 export async function saveProduct(form, file) {
   const db = requireSupabase();
   const imagePath = file ? await uploadImage('catalog-images', file) : form.image_path || null;
