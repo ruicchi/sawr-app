@@ -3,6 +3,7 @@ import { ArrowLeft, Heart, Minus, Plus, ShoppingCart, Check } from 'lucide-react
 import { useCart } from '../context/cart';
 import CartModal from '../components/CartModal';
 import NotificationModal from '../components/BackendNotificationModal';
+import ProductImage from '../components/ProductImage';
 
 export default function ProductDetail({ product, onBack, onGoToCheckout }) {
   const { addToCart, favorites, toggleFavorite, totalItemCount } = useCart();
@@ -83,15 +84,7 @@ export default function ProductDetail({ product, onBack, onGoToCheckout }) {
           {/* LEFT COLUMN: Product Image */}
           <div className="flex flex-col gap-4">
             <div className="relative aspect-square w-full rounded-2xl bg-white flex items-center justify-center border border-gray-100 shadow-inner overflow-hidden">
-              {product.image ? (
-                <img src={product.image} alt={product.name} className="h-full w-full object-contain brightness-[1.06] contrast-[1.08]" />
-              ) : (
-                <div className="text-center p-6">
-                  <span className="text-4xl md:text-6xl mb-2 block">🍌</span>
-                  <h3 className="text-amber-800 font-black text-xl md:text-2xl">{product.name}</h3>
-                  <p className="text-xs text-amber-600/80 mt-1">Freshly fried crispy banana wrap</p>
-                </div>
-              )}
+              <ProductImage src={product.image} name={product.name} />
             </div>
           </div>
 

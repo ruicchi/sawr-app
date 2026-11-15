@@ -4,6 +4,7 @@ import {
   Plus, RotateCcw, Settings, ShoppingBag, Store, Tag, Trash2,
 } from 'lucide-react';
 import sawrapLogo from '../assets/sawrap-logo.png';
+import turonPlaceholder from '../assets/turon-placeholder.png';
 import SalesAnalytics from '../components/SalesAnalytics';
 import {
   loadAdminData, loadAdminOrders, publicImage, replyToCustomer, saveAddon, saveBanner, saveProduct,
@@ -276,7 +277,14 @@ export default function BackendDashboard({ onLogout }) {
             className={`flex flex-col justify-between space-y-2 rounded-2xl border bg-white p-3 shadow-sm ${item.deleted_at || !item.is_available || item.stock === 0 ? 'border-red-200' : 'border-gray-100'}`}>
             <div>
               <div className="mb-2 flex aspect-square w-full items-center justify-center overflow-hidden rounded-xl border border-gray-100 bg-white text-center text-[11px] font-bold text-amber-600">
-                {item.image_url ? <img src={item.image_url} alt={item.name} className="h-full w-full object-contain brightness-[1.06] contrast-[1.08]" /> : `${item.name} Image`}
+                <img key={item.image_url} src={item.image_url || turonPlaceholder}
+                  alt={item.image_url ? item.name : `Placeholder for ${item.name}`}
+                  className="h-full w-full object-contain brightness-[1.06] contrast-[1.08]"
+                  onError={({ currentTarget: image }) => {
+                    if (image.getAttribute('src') === turonPlaceholder) return;
+                    image.alt = `Placeholder for ${item.name}`;
+                    image.src = turonPlaceholder;
+                  }} />
               </div>
               <div className="flex items-center justify-between gap-1"><span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-600">{item.category}</span>
                 <span className="text-[10px] font-black text-gray-600">Stock: {item.stock}</span></div>

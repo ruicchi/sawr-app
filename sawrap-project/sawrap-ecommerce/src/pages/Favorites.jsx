@@ -1,5 +1,6 @@
 import { Heart } from 'lucide-react';
 import { useCart } from '../context/cart';
+import ProductImage from '../components/ProductImage';
 
 export default function Favorites({ products, onOpenProductDetail }) {
   const { favorites, toggleFavorite, addToCart } = useCart();
@@ -50,11 +51,7 @@ export default function Favorites({ products, onOpenProductDetail }) {
 
               <div>
                 <div className="mb-3 aspect-square w-full rounded-xl bg-white flex items-center justify-center text-xs font-semibold text-amber-700 text-center overflow-hidden">
-                  {item.image ? (
-                    <img src={item.image} alt={item.name} className="h-full w-full object-contain brightness-[1.06] contrast-[1.08]" />
-                  ) : (
-                    <span>{item.name} Image</span>
-                  )}
+                  <ProductImage src={item.image} name={item.name} />
                 </div>
                 <h3 className="font-bold text-gray-800 text-sm md:text-base leading-snug line-clamp-2">
                   {item.name}

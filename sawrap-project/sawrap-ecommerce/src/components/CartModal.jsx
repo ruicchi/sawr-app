@@ -1,6 +1,6 @@
 import { X, Trash2, Ticket } from 'lucide-react';
 import { useCart } from '../context/cart';
-import turonPlaceholder from '../assets/turon-placeholder.png';
+import ProductImage from './ProductImage';
 
 export default function CartModal({ isOpen, onClose, onProceedToCheckout }) {
   const {
@@ -61,7 +61,7 @@ export default function CartModal({ isOpen, onClose, onProceedToCheckout }) {
               >
                 <div className="flex min-w-0 items-center gap-3">
                   <div className="h-12 w-12 flex-shrink-0 rounded-xl bg-white overflow-hidden flex items-center justify-center text-[10px] font-bold text-amber-700">
-                    <img src={item.image || turonPlaceholder} alt={item.name} className="h-full w-full object-contain bg-white brightness-[1.06] contrast-[1.08]" />
+                    <ProductImage src={item.image} name={item.name} />
                   </div>
                   <div className="min-w-0">
                     <h3 className="text-xs font-bold text-gray-800 [overflow-wrap:anywhere]">{item.name}</h3>
